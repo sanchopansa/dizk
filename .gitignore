@@ -1,4 +1,10 @@
 *.DS_Store
+*.pyc
 .idea
 target
 dizk.iml
+
+.vscode
+.idea
+.project
+bin/*
