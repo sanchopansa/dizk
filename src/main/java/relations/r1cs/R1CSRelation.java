@@ -13,6 +13,8 @@ import relations.objects.R1CSConstraint;
 import relations.objects.R1CSConstraints;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A system of R1CSRelation constraints looks like
@@ -83,7 +85,7 @@ public class R1CSRelation<FieldT extends AbstractFieldElementExpanded<FieldT>> i
             final FieldT c = constraints.get(i).C().evaluate(oneFullAssignment);
 
             if (!a.mul(b).equals(c)) {
-                System.out.println("R1CSConstraint unsatisfied:");
+                System.out.println("R1CSConstraint unsatisfied at row " + i);
                 System.out.println("<a,(1,x)> = " + a);
                 System.out.println("<b,(1,x)> = " + b);
                 System.out.println("<c,(1,x)> = " + c);
@@ -108,6 +110,17 @@ public class R1CSRelation<FieldT extends AbstractFieldElementExpanded<FieldT>> i
 
     public int numConstraints() {
         return numConstraints;
+    }
+
+    public String toString() {
+        List<String> list = Arrays.asList(
+                "numInputs: " + this.numInputs,
+                "numAuxiliary: " + this.numAuxiliary,
+                "numConstraints: " + this.numConstraints,
+                "Constraints: \n" + this.constraints.toString()
+        );
+        return String.join("\n", list);
+
     }
 
 }
