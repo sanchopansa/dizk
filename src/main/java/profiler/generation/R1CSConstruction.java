@@ -18,16 +18,13 @@ import scala.Tuple2;
 import scala.Tuple3;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
+import java.util.*;
 import java.util.Iterator;
 
 public class R1CSConstruction implements Serializable {
 
-    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> Tuple3<R1CSRelation<FieldT>,
-            Assignment<FieldT>,
-            Assignment<FieldT>>
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+        Tuple3<R1CSRelation<FieldT>, Assignment<FieldT>, Assignment<FieldT>>
     serialConstruct(
             final int numConstraints,
             final int numInputs,
@@ -110,9 +107,7 @@ public class R1CSConstruction implements Serializable {
     }
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-    Tuple3<R1CSRelationRDD<FieldT>,
-            Assignment<FieldT>,
-            JavaPairRDD<Long, FieldT>>
+        Tuple3<R1CSRelationRDD<FieldT>, Assignment<FieldT>, JavaPairRDD<Long, FieldT>>
     parallelConstruct(
             final long numConstraints,
             final int numInputs,
@@ -358,6 +353,48 @@ public class R1CSConstruction implements Serializable {
         return new Tuple3<>(r1cs, primary, oneFullAssignment);
     }
 
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+        Tuple3<R1CSRelation<FieldT>, Assignment<FieldT>, Assignment<FieldT>>
+    serialSmallestExample(final FieldT fieldFactory) {
+
+        int numConstraints = 1;
+        int numInputs = 1;
+
+        final int numAuxiliary = 2 + numConstraints - numInputs;
+
+        final FieldT one = fieldFactory.one();
+        final FieldT zero = fieldFactory.zero();
+
+        final Assignment<FieldT> oneFullAssignment = new Assignment<>(Arrays.asList(one, zero, zero));
+
+        final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
+
+        final LinearCombination<FieldT> A = new LinearCombination<>();
+        final LinearCombination<FieldT> B = new LinearCombination<>();
+        final LinearCombination<FieldT> C = new LinearCombination<>();
+
+        LinearTerm<FieldT> oneAtZero = new LinearTerm<>((long) 0, one);
+
+        // a * b = c.
+        A.add(oneAtZero);
+        B.add(oneAtZero);
+        C.add(oneAtZero);
+
+        constraints.add(new R1CSConstraint<>(A, B, C));
+
+        final R1CSRelation<FieldT> r1cs = new R1CSRelation<>(constraints, numInputs, numAuxiliary);
+        final Assignment<FieldT> primary = new Assignment<>(oneFullAssignment.subList(0, numInputs));
+        final Assignment<FieldT> auxiliary = new Assignment<>(oneFullAssignment.subList(numInputs, oneFullAssignment.size()));
+
+        assert (r1cs.numInputs() == numInputs);  // Seems tautological! Line 387.
+        assert (r1cs.numVariables() >= numInputs);
+        assert (r1cs.numVariables() == oneFullAssignment.size());
+        assert (r1cs.numConstraints() == numConstraints);
+        assert (r1cs.isSatisfied(primary, auxiliary));
+
+        return new Tuple3<>(r1cs, primary, auxiliary);
+    }
+
     /** Linear algebra applications */
 
     // Matrix multiplication
@@ -370,8 +407,6 @@ public class R1CSConstruction implements Serializable {
         constraintB,
         constraintC
     }
-
-    ;
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
     void constraintAssignment(ArrayList<Tuple2<Long, LinearTerm<FieldT>>> constraintArray,
@@ -484,14 +519,26 @@ public class R1CSConstruction implements Serializable {
 
     // For debugging purposes
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-    void printMatrix(ArrayList<Tuple2<Long, FieldT>> data,
-                     long offset, long row, long col) {
+    void printMatrix(ArrayList<Tuple2<Long, FieldT>> data, long offset, long row, long col) {
         // The matrix is row x col
         for (long i = 0; i < row; i++) {
             System.out.print("Row " + i + "  ---   ");
             for (long j = 0; j < col; j++) {
                 int idx = (int) (offset + i * col + j);
-                System.out.print("[" + idx + "]" + data.get((int) idx)._2() + " ");
+                System.out.print("[" + idx + "]" + data.get(idx)._2() + " ");
+            }
+            System.out.println("");
+        }
+    }
+
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+    void printSerialMatrix(LinearCombination<FieldT> data, long offset, long row, long col) {
+        // The matrix is row x col
+        for (long i = 0; i < row; i++) {
+            System.out.print("Row " + i + "  ---   ");
+            for (long j = 0; j < col; j++) {
+                int idx = (int) (offset + i * col + j);
+                System.out.print("[" + idx + "]" + data.get(idx).value() + " ");
             }
             System.out.println("");
         }
@@ -503,14 +550,8 @@ public class R1CSConstruction implements Serializable {
     // B: n2 by n3
     // C: n1 by n3
     // Z are the partial products, and S are the partial sums
-    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> Tuple3<R1CSRelationRDD<FieldT>,
-            Assignment<FieldT>,
-            JavaPairRDD<Long, FieldT>>
-    matmulConstruct(final int n1,
-                    final int n2,
-                    final int n3,
-                    final FieldT fieldFactory,
-                    final Configuration config) {
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> Tuple3<R1CSRelationRDD<FieldT>, Assignment<FieldT>, JavaPairRDD<Long, FieldT>>
+    matmulConstruct(final int n1, final int n2, final int n3, final FieldT fieldFactory, final Configuration config) {
 
         System.out.println("\t Partitions: " + config.numPartitions());
 
@@ -690,9 +731,7 @@ public class R1CSConstruction implements Serializable {
         ShuffleLeft,
         ShuffleRight,
         ShuffleOutput
-    }
-
-    ;
+    };
 
 
     public static int getRow(long index,
