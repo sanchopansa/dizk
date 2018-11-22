@@ -10,6 +10,7 @@ package relations.objects;
 import algebra.fields.AbstractFieldElementExpanded;
 
 import java.io.Serializable;
+import java.util.Arrays;
 import java.util.ArrayList;
 
 /**
@@ -51,5 +52,10 @@ public class R1CSConstraints<FieldT extends AbstractFieldElementExpanded<FieldT>
 
     public int size() {
         return constraints.size();
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(this.constraints.toArray());
     }
 }

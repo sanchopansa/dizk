@@ -11,6 +11,7 @@ import algebra.fields.AbstractFieldElementExpanded;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Assignment<FieldT extends AbstractFieldElementExpanded<FieldT>> implements
@@ -30,6 +31,10 @@ public class Assignment<FieldT extends AbstractFieldElementExpanded<FieldT>> imp
         elements = new ArrayList<>();
         elements.addAll(primary.elements());
         elements.addAll(auxiliary.elements());
+    }
+
+    public String toString() {
+        return Arrays.toString(this.elements.toArray());
     }
 
     public ArrayList<FieldT> elements() {
