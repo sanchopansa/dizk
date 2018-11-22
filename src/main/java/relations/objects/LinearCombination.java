@@ -11,6 +11,7 @@ import algebra.fields.AbstractFieldElementExpanded;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class LinearCombination<FieldT extends AbstractFieldElementExpanded<FieldT>> implements
         Serializable {
@@ -23,6 +24,11 @@ public class LinearCombination<FieldT extends AbstractFieldElementExpanded<Field
 
     public boolean add(final LinearTerm<FieldT> term) {
         return terms.add(term);
+    }
+
+    public boolean add(int index, final LinearTerm<FieldT> term) {
+        terms.add(index, term);
+        return true;
     }
 
     public boolean isValid(final int numVariables) {
@@ -72,5 +78,10 @@ public class LinearCombination<FieldT extends AbstractFieldElementExpanded<Field
 
     public int size() {
         return terms.size();
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(this.terms.toArray()) + '\n';
     }
 }
