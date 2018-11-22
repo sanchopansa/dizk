@@ -1,8 +1,15 @@
 *.DS_Store
+
 .classpath
+
 .idea
 .project
 .settings
 out/*
 target
 dizk.iml
+
+.vscode
+.idea
+.project
+bin/*
