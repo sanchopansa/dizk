@@ -73,9 +73,9 @@ public class R1CSRelation<FieldT extends AbstractFieldElementExpanded<FieldT>> i
         assert (primary.size() + auxiliary.size() == this.numVariables());
 
         // Assert first element == FieldT.one().
-        final FieldT firstElement = primary.elements().get(0);
-        final FieldT one = firstElement.one();
-        assert (firstElement.equals(one));
+//        final FieldT firstElement = primary.elements().get(0);
+//        final FieldT one = firstElement.one();
+//        assert (firstElement.equals(one));
 
         final Assignment<FieldT> oneFullAssignment = new Assignment<>(primary, auxiliary);
 
