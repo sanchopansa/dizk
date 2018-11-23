@@ -73,9 +73,9 @@ public class R1CSRelation<FieldT extends AbstractFieldElementExpanded<FieldT>> i
         assert (primary.size() + auxiliary.size() == this.numVariables());
 
         // Assert first element == FieldT.one().
-//        final FieldT firstElement = primary.elements().get(0);
-//        final FieldT one = firstElement.one();
-//        assert (firstElement.equals(one));
+        final FieldT firstElement = primary.elements().get(0);
+        final FieldT one = firstElement.one();
+        assert (firstElement.equals(one));
 
         final Assignment<FieldT> oneFullAssignment = new Assignment<>(primary, auxiliary);
 
@@ -86,6 +86,11 @@ public class R1CSRelation<FieldT extends AbstractFieldElementExpanded<FieldT>> i
 
             if (!a.mul(b).equals(c)) {
                 System.out.println("R1CSConstraint unsatisfied at row " + i);
+
+                System.out.println("A = " + constraints.get(i).A().toString());
+                System.out.println("B = " + constraints.get(i).B().toString());
+                System.out.println("C = " + constraints.get(i).C().toString());
+
                 System.out.println("<a,(1,x)> = " + a);
                 System.out.println("<b,(1,x)> = " + b);
                 System.out.println("<c,(1,x)> = " + c);
