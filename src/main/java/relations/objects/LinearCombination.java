@@ -48,7 +48,8 @@ public class LinearCombination<FieldT extends AbstractFieldElementExpanded<Field
 
         for (int i = 0; i < terms.size(); i++) {
             final long index = terms.get(i).index();
-            final FieldT value = index == 0 ? one : input.get((int) index).mul(terms.get(i).value());
+//            final FieldT value = index == 0 ? one : input.get((int) index).mul(terms.get(i).value());
+            final FieldT value = input.get((int) index).mul(terms.get(i).value());
 
             result = result.add(value);
         }
