@@ -2,6 +2,7 @@ from collections import defaultdict
 
 import json
 
+
 def convert_to_matrix(mat):
     """
     :param mat: list(dict{int: int})
@@ -62,24 +63,3 @@ def pepper_to_json(file_source_path, filename):
 def export_pepper_to_json(file_source_path, filename):
     with open(file_source_path + filename + '.json', 'w') as file:
         file.write(pepper_to_json(file_source_path, filename))
-
-
-
-
-# def rollup_to_json(file_source_path, filename):
-#     """
-#     :param file_source_path: (str) path to file
-#     :param filename: (str) name of file
-#     :return: path to json file format accepted by DIZK
-#     """
-#     with open(file_source_path + '/' + filename, 'r') as file:
-#         text = file.readlines()
-#         print(len(text))
-#         for line in list(text)[:20]:
-#             line = line.strip()
-#             if line:
-#                 print(line[:40] + '....' + line[::-1][:40][::-1])
-#             else:
-#                 print("NOTHING")
-
-
