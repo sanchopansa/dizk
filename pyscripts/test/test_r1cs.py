@@ -44,13 +44,12 @@ class TestR1CS(unittest.TestCase):
             ]
         }
 
-    @unittest.skip("missing required input files (primary & auxiliary)")
     def test_small_pepper_to_JSON(self):
 
         result = pepper_to_json(self.path + 'small/', 'r1cs.small_')
 
         expected = json.dumps({
-            'primary_input': [],
+            'primary_input': ["1"],
             'aux_input': [],
             'constraints': [
                 [{"0": 1}, {"0": 1}, {"0": 1}]
@@ -59,25 +58,17 @@ class TestR1CS(unittest.TestCase):
 
         self.assertEqual(expected, result)
 
-    @unittest.skip("missing required input files (primary & auxiliary)")
     def test_medium_pepper_to_JSON(self):
 
         result = pepper_to_json(self.path, 'medium/r1cs.medium_')
 
         expected = {
-            'primary_input': [],
-            'aux_input': [],
-            'constraints': [
-                [{}, {}, {}],
-                [{}, {}, {0: 1, 1: -1}],
-                [{0: 1, 3: 2}, {}, {8: -1}],
-                [{7: 2}, {}, {9: -1}],
-                [{}, {}, {0: -1}],
-                [{0: 1, 2: 2}, {1: 5, 2: 128, 7: 64, 8: 32, 9: 409}, {1: -1}],
-                [{0: 1}, {10: 204}, {2: -1}],
-                [{0: 1}, {}, {}],
-                [{0: 1}, {}, {}],
-                [{0: 1}, {}, {}]
+            "primary_input": ["1", "0"],
+            "aux_input": ["1", "1", "1"],
+            "constraints": [
+                [{"1": 1, "2": 1}, {"0": 1}, {"2": 1}],
+                [{"2": 1}, {"3": 1}, {"3": 1}],
+                [{"1": 1, "2": 1, "3": 1}, {"1": 1, "2": 1, "3": 1}, {"4": 1}]
             ]
         }
 
@@ -86,15 +77,17 @@ class TestR1CS(unittest.TestCase):
     def test_export_pepper_to_json(self):
 
         f_name = 'satisfiable_pepper_'
-        export_pepper_to_json(self.path, f_name)
+        test_path = self.path + 'satisfiable/'
 
-        with open(self.path + f_name + '.json') as file:
+        export_pepper_to_json(test_path, f_name)
+
+        with open(test_path + f_name + '.json') as file:
             result = json.load(file)
 
         self.assertEqual(self.expected_satisfiable, result)
 
     def test_satisfiable_pepper_output(self):
-        f_name = 'satisfiable_pepper_'
+        f_name = 'satisfiable/satisfiable_pepper_'
 
         result = pepper_to_json(self.path, f_name)
 
