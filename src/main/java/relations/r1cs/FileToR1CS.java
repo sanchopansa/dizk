@@ -6,24 +6,18 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import relations.objects.*;
+import scala.Tuple2;
 import scala.Tuple3;
 
 import java.io.*;
-import java.util.Arrays;
 import java.util.Iterator;
 
 
 public class FileToR1CS {
 
-    public static void main(String[] args) {
-
-    }
-
     private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-        LinearCombination<FieldT>
-    JSONObjectToCombination (
-            final JSONObject matrixRow,
-            final FieldT fieldFactory) {
+    LinearCombination<FieldT>
+    JSONObjectToCombination (final JSONObject matrixRow) {
 
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
@@ -32,16 +26,16 @@ public class FileToR1CS {
             String key = keys.next();
 
             long columnIndex = Long.parseLong(key);
-            long value = (long) matrixRow.get(key);
+            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(Long.toString((long) matrixRow.get(key)));
 
-            L.add(new LinearTerm<>(columnIndex, fieldFactory.construct(value)));
+            L.add(new LinearTerm<>(columnIndex, (FieldT) value));
         }
         return L;
     }
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
         Tuple3<R1CSRelation<FieldT>, Assignment<FieldT>, Assignment<FieldT>>
-    R1CSFromJSON(final FieldT fieldFactory, String filePath) {
+    serialR1CSFromJSON(String filePath) {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray primaryInputs = new JSONArray();
@@ -49,7 +43,6 @@ public class FileToR1CS {
         JSONArray constraintList = new JSONArray();
 
         try {
-            // TODO - pass string to input file.
             Object obj = parser.parse(new FileReader(filePath));
 
             jsonObject = (JSONObject) obj;
@@ -81,7 +74,6 @@ public class FileToR1CS {
             constraintArray[i] = (JSONArray) constraintList.get(i);
         }
 
-
         final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
         for (int i = 0; i < constraintArray.length; i++) {
@@ -91,9 +83,9 @@ public class FileToR1CS {
             JSONObject nextC = (JSONObject) constraintArray[i].get(2);
 
 
-            final LinearCombination<FieldT> A = JSONObjectToCombination(nextA, fieldFactory);
-            final LinearCombination<FieldT> B = JSONObjectToCombination(nextB, fieldFactory);
-            final LinearCombination<FieldT> C = JSONObjectToCombination(nextC, fieldFactory);
+            final LinearCombination<FieldT> A = JSONObjectToCombination(nextA);
+            final LinearCombination<FieldT> B = JSONObjectToCombination(nextB);
+            final LinearCombination<FieldT> C = JSONObjectToCombination(nextC);
 
             constraints.add(new R1CSConstraint<>(A, B, C));
         }
@@ -112,96 +104,81 @@ public class FileToR1CS {
         return new Tuple3<>(r1cs, primary, auxiliary);
     }
 
-    public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-        Tuple3<R1CSRelation<FieldT>, Assignment<FieldT>, Assignment<FieldT>>
-    R1CSFromPlainText(final FieldT fieldFactory) {
+    public static <FieldT extends AbstractFieldElementExpanded<FieldT>> R1CSRelation<FieldT>
+    serialR1CSFromPlainText(String filePath) {
 
         final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
-        final LinearCombination<FieldT> A = new LinearCombination<>();
-        final LinearCombination<FieldT> B = new LinearCombination<>();
-        final LinearCombination<FieldT> C = new LinearCombination<>();
-
-        final FieldT one = fieldFactory.one();
-        final FieldT zero = fieldFactory.zero();
+        int numInputs = -1;
+        int numAuxiliary = -1;
 
         try{
-            FileInputStream fileStreamA = new FileInputStream("src/data/r1cs.medium_a");
-            FileInputStream fileStreamB = new FileInputStream("src/data/r1cs.medium_b");
-            FileInputStream fileStreamC = new FileInputStream("src/data/r1cs.medium_c");
+            String[] constraintParameters = new BufferedReader(
+                    new FileReader(filePath + "cropped_hash_problem_size")).readLine().split(" ");
 
-            DataInputStream inA = new DataInputStream(fileStreamA);
-            DataInputStream inB = new DataInputStream(fileStreamB);
-            DataInputStream inC = new DataInputStream(fileStreamC);
+            numInputs = Integer.parseInt(constraintParameters[1]);
+            numAuxiliary = Integer.parseInt(constraintParameters[2]);
 
-            BufferedReader brA = new BufferedReader(new InputStreamReader(inA));
-            BufferedReader brB = new BufferedReader(new InputStreamReader(inB));
-            BufferedReader brC = new BufferedReader(new InputStreamReader(inC));
+            int numConstraints = Integer.parseInt(constraintParameters[2]);
 
+            BufferedReader brA = new BufferedReader(new FileReader(filePath + "cropped_hash_a"));
+            BufferedReader brB = new BufferedReader(new FileReader(filePath + "cropped_hash_b"));
+            BufferedReader brC = new BufferedReader(new FileReader(filePath + "cropped_hash_b"));
 
-            // TODO - This construction is wrong. It puts all the elements into the first row.
-            String strA;
-            while ((strA = brA.readLine()) != null)   {
-                String[] tokens = strA.split(" ");
-                int colIndex = Integer.parseInt(tokens[0]);
-                int rowIndex = Integer.parseInt(tokens[1]);
-                long value = Long.parseLong(tokens[2]);
+            for (int currRow = 0; currRow < numConstraints; currRow++){
+                //  Start a fresh row for each of A, B, C
+                Tuple2<LinearCombination<FieldT>, BufferedReader> resA = makeRowAt(currRow, brA);
+                final LinearCombination<FieldT> A = resA._1();
+                brA = resA._2();
 
-                // TODO - should be able to extend ArrayList better than this. Or just insert wherever.
-                while (A.size() < rowIndex) {
-                    A.add(new LinearTerm<>((long) colIndex, zero));
-                }
-                A.add(rowIndex, new LinearTerm<>((long) colIndex, fieldFactory.construct(value)));
+                Tuple2<LinearCombination<FieldT>, BufferedReader> resB = makeRowAt(currRow, brB);
+                final LinearCombination<FieldT> B = resB._1();
+                brB = resB._2();
 
+                Tuple2<LinearCombination<FieldT>, BufferedReader> resC = makeRowAt(currRow, brC);
+                final LinearCombination<FieldT> C = resC._1();
+                brC = resC._2();
+
+                constraints.add(new R1CSConstraint<>(A, B, C));
             }
-            inA.close();
 
-            String strB;
-            while ((strB = brB.readLine()) != null)   {
-                String[] tokens = strB.split(" ");
-                int colIndex = Integer.parseInt(tokens[0]);
-                int rowIndex = Integer.parseInt(tokens[1]);
-                long value = Long.parseLong(tokens[2]);
-
-                while (B.size() < rowIndex) {
-                    B.add(new LinearTerm<>((long) colIndex, zero));
-                }
-                B.add(rowIndex, new LinearTerm<>((long) colIndex, fieldFactory.construct(value)));
-
-            }
-            inB.close();
-
-            String strC;
-            while ((strC = brC.readLine()) != null)   {
-                String[] tokens = strC.split(" ");
-                int colIndex = Integer.parseInt(tokens[0]);
-                int rowIndex = Integer.parseInt(tokens[1]);
-                long value = Long.parseLong(tokens[2]);
-
-                while (C.size() < rowIndex) {
-                    C.add(new LinearTerm<>((long) colIndex, zero));
-                }
-                C.add(rowIndex, new LinearTerm<>((long) colIndex, fieldFactory.construct(value)));
-
-            }
-            inC.close();
-
-            constraints.add(new R1CSConstraint<>(A, B, C));
+            brA.close();
+            brB.close();
+            brC.close();
 
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
 
-        final Assignment<FieldT> oneFullAssignment = new Assignment<>(Arrays.asList(one, zero, zero));
+        return new R1CSRelation<>(constraints, numInputs, numAuxiliary);
+    }
 
-        final int numConstraints = 1; // TODO - set equal to max size of A, B, C.
-        final int numInputs = 1;  // TODO - should be specified somewhere as k...
-        final int numAuxiliary = 2 + numConstraints - numInputs;  // TODO - Should be max columnIndex + 1 - numInputs.
+    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+        Tuple2<LinearCombination<FieldT>, BufferedReader>
+    makeRowAt (int index, BufferedReader reader) {
+        // Assumes input to be ordered by row and that the last line is blank.
+        final LinearCombination<FieldT> L = new LinearCombination<>();
 
-        final R1CSRelation<FieldT> r1cs = new R1CSRelation<>(constraints, numInputs, numAuxiliary);
-        final Assignment<FieldT> primary = new Assignment<>(oneFullAssignment.subList(0, numInputs));
-        final Assignment<FieldT> auxiliary = new Assignment<>(oneFullAssignment.subList(numInputs, oneFullAssignment.size()));
+        try {
+            String nextLine;
+            reader.mark(1);  // TODO - this is very strange.
+            while ((nextLine = reader.readLine()) != null) {
+                String[] tokens = nextLine.split(" ");
 
-        return new Tuple3<>(r1cs, primary, auxiliary);
+                int col = Integer.parseInt(tokens[0]);
+                int row = Integer.parseInt(tokens[1]);
+                final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(tokens[2]);
+
+                if (row == index) {
+                    L.add(new LinearTerm<>(col, (FieldT) value));
+                } else if (row > index) {
+                    reader.reset();
+                    return new Tuple2<>(L, reader);
+                }
+            }
+        } catch (Exception e){
+            System.err.println("Error: " + e.getMessage());
+        }
+        return new Tuple2<>(L, reader);
     }
 }
