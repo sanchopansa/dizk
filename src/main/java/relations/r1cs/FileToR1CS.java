@@ -13,7 +13,6 @@ import scala.Tuple3;
 
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 
 
@@ -251,11 +250,26 @@ public class FileToR1CS {
                     return C.iterator();
                 });
 
+        // Make a function for this if it is necessary.
+        final Assignment<FieldT> serialAssignment = new Assignment<>();
+        int numInputs = primaryInputs.size();
+        for (int i = 0; i < numInputs; i++) {
+            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) primaryInputs.get(i));
+            serialAssignment.add((FieldT) value);
+        }
+        int numAuxiliary = auxInputs.size();
+        for (int i = 0; i < numAuxiliary; i++) {
+            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) auxInputs.get(i));
+            serialAssignment.add((FieldT) value);
+        }
+
+        final long numVariables = numInputs + numAuxiliary;
+
         final ArrayList<Integer> variablePartitions = new ArrayList<>();
         for (int i = 0; i < numPartitions; i++) {
             variablePartitions.add(i);
         }
-        if (numConstraints % 2 != 0) {
+        if (numVariables % 2 != 0) {
             variablePartitions.add(numPartitions);
         }
 
@@ -264,25 +278,9 @@ public class FileToR1CS {
         for (int i = 0; i < numExecutors; i++) {
             assignmentPartitions.add(i);
         }
-        if (numConstraints % 2 != 0) {
+        if (numVariables % 2 != 0) {
             assignmentPartitions.add(numExecutors);
         }
-
-        final Assignment<FieldT> serialAssignment = new Assignment<>();
-
-        int numInputs = primaryInputs.size();
-        for (int i = 0; i < numInputs; i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) primaryInputs.get(i));
-            serialAssignment.add((FieldT) value);
-        }
-
-        int numAuxiliary = auxInputs.size();
-        for (int i = 0; i < numAuxiliary; i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) auxInputs.get(i));
-            serialAssignment.add((FieldT) value);
-        }
-
-        final long numVariables = numInputs + numAuxiliary;
 
         JavaPairRDD<Long, FieldT> oneFullAssignment = config.sparkContext()
                 .parallelize(assignmentPartitions, numExecutors).flatMapToPair(part -> {
@@ -344,11 +342,14 @@ public class FileToR1CS {
         Iterator<String> keys = matrixRow.keySet().iterator();
         while (keys.hasNext()) {
             String key = keys.next();
-
-            long columnIndex = Long.parseLong(key);
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(Long.toString((long) matrixRow.get(key)));
-
-            L.add(new LinearTerm<>(columnIndex, (FieldT) value));
+            BN254aFields.BN254aFr value;
+            try{
+                value = new BN254aFields.BN254aFr((String) matrixRow.get(key));
+            } catch (ClassCastException e){
+                // Handle case when key-value pairs are String: Long
+                value = new BN254aFields.BN254aFr(Long.toString((long) matrixRow.get(key)));
+            }
+            L.add(new LinearTerm<>(Long.parseLong(key), (FieldT) value));
         }
         return L;
     }
