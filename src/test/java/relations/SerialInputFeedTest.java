@@ -54,7 +54,7 @@ public class SerialInputFeedTest implements Serializable {
         r1csFromJSON = FileToR1CS.serialR1CSFromJSON(jsonFilePath + "satisfiable_pepper.json");
 
         // Notice that FromText returns only the constraints.
-        r1csFromText = FileToR1CS.serialR1CSFromPlainText(textFilePath);
+        r1csFromText = FileToR1CS.serialR1CSFromPlainText(textFilePath + "cropped_hash");
     }
 
     @After
