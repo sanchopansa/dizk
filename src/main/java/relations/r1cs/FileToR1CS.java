@@ -80,11 +80,11 @@ public class FileToR1CS {
         final Assignment<FieldT> auxiliary = new Assignment<>(oneFullAssignment
                 .subList(numInputs, oneFullAssignment.size()));
 
-//        assert (r1cs.numInputs() == numInputs);
-//        assert (r1cs.numVariables() >= numInputs);
-//        assert (r1cs.numVariables() == oneFullAssignment.size());
-//        assert (r1cs.numConstraints() == numConstraints);
-//        assert (r1cs.isSatisfied(primary, auxiliary));
+        assert (r1cs.numInputs() == numInputs);
+        assert (r1cs.numVariables() >= numInputs);
+        assert (r1cs.numVariables() == oneFullAssignment.size());
+        assert (r1cs.numConstraints() == numConstraints);
+        assert (r1cs.isSatisfied(primary, auxiliary));
 
         return new Tuple3<>(r1cs, primary, auxiliary);
     }
@@ -100,16 +100,16 @@ public class FileToR1CS {
 
         try{
             String[] constraintParameters = new BufferedReader(
-                    new FileReader(filePath + "cropped_hash_problem_size")).readLine().split(" ");
+                    new FileReader(filePath + ".problem_size")).readLine().split(" ");
 
             numInputs = Integer.parseInt(constraintParameters[1]);
             numAuxiliary = Integer.parseInt(constraintParameters[2]);
 
             int numConstraints = Integer.parseInt(constraintParameters[2]);
 
-            BufferedReader brA = new BufferedReader(new FileReader(filePath + "cropped_hash_a"));
-            BufferedReader brB = new BufferedReader(new FileReader(filePath + "cropped_hash_b"));
-            BufferedReader brC = new BufferedReader(new FileReader(filePath + "cropped_hash_b"));
+            BufferedReader brA = new BufferedReader(new FileReader(filePath + ".a"));
+            BufferedReader brB = new BufferedReader(new FileReader(filePath + ".b"));
+            BufferedReader brC = new BufferedReader(new FileReader(filePath + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
                 //  Start a fresh row for each of A, B, C
@@ -180,77 +180,17 @@ public class FileToR1CS {
             partitions.add(numPartitions);
         }
 
-        // Make combinations A, B and C. TODO - remove duplicate code
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = config.sparkContext()
-                .parallelize(partitions, numPartitions).flatMapToPair(part -> {
-                    final long partSize = part == numPartitions ?
-                            numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
+        // Load Linear Combinations as RDD format
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = makeDistributedCombinationFromJSON(
+                config, partitions, constraintArray, 0, numPartitions, numConstraints);
 
-                    final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> A = new ArrayList<>();
-                    for (long i = 0; i < partSize; i++) {
-                        final long index = part * (numConstraints / numPartitions) + i;
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = makeDistributedCombinationFromJSON(
+                config, partitions, constraintArray, 1, numPartitions, numConstraints);
 
-                        JSONObject nextA = (JSONObject) constraintArray[(int) index].get(0);
-                        Iterator<String> keys = nextA.keySet().iterator();
-                        while (keys.hasNext()) {
-                            String key = keys.next();
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = makeDistributedCombinationFromJSON(
+                config, partitions, constraintArray, 2, numPartitions, numConstraints);
 
-                            long columnIndex = Long.parseLong(key);
-                            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(Long.toString((long) nextA.get(key)));
-
-                            A.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
-                        }
-
-                    }
-                    return A.iterator();
-                });
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = config.sparkContext()
-                .parallelize(partitions, numPartitions).flatMapToPair(part -> {
-                    final long partSize = part == numPartitions ?
-                            numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
-
-                    final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> B = new ArrayList<>();
-                    for (long i = 0; i < partSize; i++) {
-                        final long index = part * (numConstraints / numPartitions) + i;
-
-                        JSONObject nextB = (JSONObject) constraintArray[(int) index].get(1);
-                        Iterator<String> keys = nextB.keySet().iterator();
-                        while (keys.hasNext()) {
-                            String key = keys.next();
-
-                            long columnIndex = Long.parseLong(key);
-                            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(Long.toString((long) nextB.get(key)));
-
-                            B.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
-                        }
-
-                    }
-                    return B.iterator();
-                });
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = config.sparkContext()
-                .parallelize(partitions, numPartitions).flatMapToPair(part -> {
-                    final long partSize = part == numPartitions ?
-                            numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
-
-                    final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> C = new ArrayList<>();
-                    for (long i = 0; i < partSize; i++) {
-                        final long index = part * (numConstraints / numPartitions) + i;
-
-                        JSONObject nextC = (JSONObject) constraintArray[(int) index].get(2);
-                        Iterator<String> keys = nextC.keySet().iterator();
-                        while (keys.hasNext()) {
-                            String key = keys.next();
-
-                            long columnIndex = Long.parseLong(key);
-                            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(Long.toString((long) nextC.get(key)));
-                            C.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
-                        }
-
-                    }
-                    return C.iterator();
-                });
-
-        // Make a function for this if it is necessary.
+        // Serial assignment may not be necessary.
         final Assignment<FieldT> serialAssignment = new Assignment<>();
         int numInputs = primaryInputs.size();
         for (int i = 0; i < numInputs; i++) {
@@ -284,18 +224,15 @@ public class FileToR1CS {
 
         JavaPairRDD<Long, FieldT> oneFullAssignment = config.sparkContext()
                 .parallelize(assignmentPartitions, numExecutors).flatMapToPair(part -> {
-                    final ArrayList<Tuple2<Long, FieldT>> assignment = new ArrayList<>();
-
-
                     final long startIndex = part * (numVariables / numExecutors);
                     final long partSize = part == numExecutors ? numVariables %
                             (numVariables / numExecutors) : numVariables / numExecutors;
 
+                    final ArrayList<Tuple2<Long, FieldT>> assignment = new ArrayList<>();
                     for (long i = startIndex; i < startIndex + partSize; i++) {
                         assignment.add(new Tuple2<>(i, serialAssignment.get((int) i)));
                     }
                     return assignment.iterator();
-
                 }).persist(config.storageLevel());
 
 
@@ -327,8 +264,99 @@ public class FileToR1CS {
     }
 
 //    public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-//        R1CSRelation<FieldT>
-//    distributedR1CSFromPlainText(String filePath) {
+//        R1CSRelationRDD<FieldT>
+//    distributedR1CSFromPlainText(
+//            String filePath,
+//            final Configuration config) {
+//
+//        final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
+//
+//        int numInputs = -1;
+//        int numAuxiliary = -1;
+//
+//        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA;
+//        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB;
+//        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC;
+//
+//        try{
+//            String[] constraintParameters = new BufferedReader(
+//                    new FileReader(filePath + ".problem_size")).readLine().split(" ");
+//
+//            numInputs = Integer.parseInt(constraintParameters[1]);
+//            numAuxiliary = Integer.parseInt(constraintParameters[2]);
+//
+//            int numConstraints = Integer.parseInt(constraintParameters[2]);
+//            // instantiate partition array
+//            final int numPartitions = config.numPartitions();
+//            final ArrayList<Integer> partitions = new ArrayList<>();
+//            for (int i = 0; i < numPartitions; i++) {
+//                partitions.add(i);
+//            }
+//            if (numConstraints % 2 != 0) {
+//                partitions.add(numPartitions);
+//            }
+//
+//            final BufferedReader brB = new BufferedReader(new FileReader(filePath + ".b"));
+//            final BufferedReader brC = new BufferedReader(new FileReader(filePath + ".c"));
+//
+//
+//            linearCombinationA = config.sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
+//                        final long partSize = part == numPartitions ?
+//                                numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
+//
+//                        BufferedReader brA = new BufferedReader(new FileReader(filePath + ".a"));
+//
+//                        final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> A = new ArrayList<>();
+//                        for (long i = 0; i < partSize; i++) {
+//                            final long index = part * (numConstraints / numPartitions) + i;
+//
+//                            Tuple2<LinearCombination<FieldT>, BufferedReader> resA = makeRowAt(index, brA);
+//                            final LinearCombination<FieldT> combinationA = resA._1();
+//                            brA = resA._2();
+//
+//
+//                            A.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
+//
+//
+//                        }
+//                        return A.iterator();
+//                    });
+//
+//
+//            for (int currRow = 0; currRow < numConstraints; currRow++){
+//                //  Start a fresh row for each of A, B, C
+//                Tuple2<LinearCombination<FieldT>, BufferedReader> resA = makeRowAt(currRow, brA);
+//                final LinearCombination<FieldT> A = resA._1();
+//                brA = resA._2();
+//
+//                Tuple2<LinearCombination<FieldT>, BufferedReader> resB = makeRowAt(currRow, brB);
+//                final LinearCombination<FieldT> B = resB._1();
+//                brB = resB._2();
+//
+//                Tuple2<LinearCombination<FieldT>, BufferedReader> resC = makeRowAt(currRow, brC);
+//                final LinearCombination<FieldT> C = resC._1();
+//                brC = resC._2();
+//
+//                constraints.add(new R1CSConstraint<>(A, B, C));
+//            }
+//
+//            brA.close();
+//            brB.close();
+//            brC.close();
+//
+//        } catch (Exception e){
+//            System.err.println("Error: " + e.getMessage());
+//        }
+//
+//        linearCombinationA.count();
+//        linearCombinationB.count();
+//        linearCombinationC.count();
+//
+//        final R1CSConstraintsRDD<FieldT> constraints = new R1CSConstraintsRDD<>(
+//                linearCombinationA,
+//                linearCombinationB,
+//                linearCombinationC,
+//                numConstraints);
 //
 //        return new R1CSRelationRDD<>(constraints, numInputs, numAuxiliary);
 //    }
@@ -382,4 +410,69 @@ public class FileToR1CS {
         }
         return new Tuple2<>(L, reader);
     }
+
+    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+        JavaPairRDD<Long, LinearTerm<FieldT>>
+    makeDistributedCombinationFromJSON(
+            Configuration config,
+            ArrayList<Integer> partitions,
+            JSONArray[] constraintArray,
+            int constraintArrayIndex,
+            int numPartitions,
+            int numConstraints
+    ){
+        return config.sparkContext()
+                .parallelize(partitions, numPartitions).flatMapToPair(part -> {
+            final long partSize = part == numPartitions ?
+                    numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
+
+            final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> T = new ArrayList<>();
+            for (long i = 0; i < partSize; i++) {
+                final long index = part * (numConstraints / numPartitions) + i;
+
+                JSONObject next = (JSONObject) constraintArray[(int) index].get(constraintArrayIndex);
+                Iterator<String> keys = next.keySet().iterator();
+                while (keys.hasNext()) {
+                    String key = keys.next();
+
+                    long columnIndex = Long.parseLong(key);
+                    BN254aFields.BN254aFr value;
+                    try{
+                        value = new BN254aFields.BN254aFr((String) next.get(key));
+                    } catch (ClassCastException e){
+                        // Handle case when key-value pairs are String: Long
+                        value = new BN254aFields.BN254aFr(Long.toString((long) next.get(key)));
+                    }
+                    T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
+                }
+
+            }
+            return T.iterator();
+        });
+    }
+
+    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+        JavaPairRDD<Long, LinearTerm<FieldT>>
+    makeDistributedCombinationFromStream(
+            BufferedReader br,
+            Configuration config,
+            ArrayList<Integer> partitions,
+            int numPartitions,
+            int numConstraints
+    ){
+        return config.sparkContext()
+                .parallelize(partitions, numPartitions).flatMapToPair(part -> {
+                    final long partSize = part == numPartitions ?
+                            numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
+
+                    final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> T = new ArrayList<>();
+                    for (long i = 0; i < partSize; i++) {
+                        final long index = part * (numConstraints / numPartitions) + i;
+                        // TODO - Make it so
+//                        T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
+                    }
+                    return T.iterator();
+                });
+    }
 }
+
