@@ -31,7 +31,7 @@ public class DistributedInputFeedTest implements Serializable {
     @Before
     public void setUp() {
         sc = new JavaSparkContext("local", "ZKSparkTestSuite");
-        config = new Configuration(2, 2, 1, 4, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(1, 1, 1, 2, sc, StorageLevel.MEMORY_ONLY());
 
         jsonFilePath = "src/test/data/json/";
         textFilePath = "src/test/data/text/";
