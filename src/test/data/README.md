@@ -6,7 +6,7 @@ This project is currently supporting input of *Rank 1 Constraint Systems* (soon 
 
 ### Overview 
 
-- Plain text R1CS defined by 4 files (3 for matrices `a, b` and `c` and 1 for problem size). Each row of matrix files has three space separated integers `c r v` denoting that the non-zero value `v` appears at row `r` and column `c`. Each matrix file must end with a blank line.
+- Plain text R1CS defined by 4 files (3 for matrices `a, b` and `c` and 1 for problem size). Each row of matrix files has three space separated integers `c r v` denoting that the non-zero value `v` appears at row `r` and column `c`. Each matrix file **must end with a blank line**!
 - JSON R1CS defined as having *constraints* key referring to a list whose rth entry is a triple of key-value pairs denoting the column-values of the rth row of matrices `a, b and c` respectively. See below for examples.
    
 ### Text
@@ -74,7 +74,9 @@ The JSON file format of a R1CS (with inputs) consists of 3 keys `primary_inputs,
 }
 ```
 
-where the constraint at index `r` denotes the non-zero entries of the r-th row of matrices `a, b` and `c` respectively.
+where the constraint at index `r` denotes the non-zero entries of the r-th row of matrices `a, b` and `c` respectively. 
+
+- Constraint values can be either of type String or Integer.
 
 In the event that we are only interested in the constraints (without the inputs), this requirements reduces to
 
