@@ -264,6 +264,9 @@ public class FileToR1CS {
         int numAuxiliary = Integer.parseInt(constraintParameters[1]);
         int numConstraints = Integer.parseInt(constraintParameters[2]);
 
+        // Need at least one constraint per partition!
+        assert(numConstraints >= config.numPartitions());
+
         final ArrayList<Integer> partitions = constructPartitionArray(config.numPartitions(), numConstraints);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombinationFromStream(
@@ -349,6 +352,9 @@ public class FileToR1CS {
     ){
         final int numPartitions = config.numPartitions();
 
+        // Need at least one constraint per partition!
+        assert(numConstraints >= numPartitions);
+
         return config.sparkContext()
                 .parallelize(partitions, numPartitions).flatMapToPair(part -> {
             final long partSize = part == numPartitions ?
@@ -388,6 +394,9 @@ public class FileToR1CS {
             int numConstraints
     ){
         final int numPartitions = config.numPartitions();
+
+        // Need at least one constraint per partition!
+        assert(numConstraints >= numPartitions);
 
         return config.sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
             final long partSize = part == numPartitions ? numConstraints %

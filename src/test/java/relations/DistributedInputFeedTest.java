@@ -35,9 +35,9 @@ public class DistributedInputFeedTest implements Serializable {
         config = new Configuration(1, 1, 1, 2, sc, StorageLevel.MEMORY_ONLY());
 
         jsonFilePath = "src/test/data/json/";
-        textFilePath = "src/test/data/text/cropped_hash";
+        textFilePath = "src/test/data/text/contrived/small";
 
-        r1csFromJSON = FileToR1CS.distributedR1CSFromJSON(jsonFilePath + "libsnark_tutorial.json", config);
+        r1csFromJSON = FileToR1CS.distributedR1CSFromJSON(jsonFilePath + "satisfiable_pepper.json", config);
         r1csFromText = FileToR1CS.distributedR1CSFromText(textFilePath, config);
 
 
