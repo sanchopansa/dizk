@@ -49,7 +49,7 @@ public class SerialInputFeedTest implements Serializable {
         config = new Configuration();
 
         jsonFilePath = "src/test/data/json/";
-        textFilePath = "src/test/data/text/";
+        textFilePath = "src/test/data/text/cropped_hash/";
 
         r1csFromJSON = FileToR1CS.serialR1CSFromJSON(jsonFilePath + "satisfiable_pepper.json");
 
