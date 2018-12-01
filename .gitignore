@@ -1,6 +1,11 @@
 *.DS_Store
 *.pyc
+.classpath
+
 .idea
+.project
+.settings
+out/*
 target
 dizk.iml
 
