@@ -26,11 +26,6 @@ public class LinearCombination<FieldT extends AbstractFieldElementExpanded<Field
         return terms.add(term);
     }
 
-    public boolean add(int index, final LinearTerm<FieldT> term) {
-        terms.add(index, term);
-        return true;
-    }
-
     public boolean isValid(final int numVariables) {
         // Check that the variables are in proper range.
         for (int i = 0; i < terms.size(); i++) {
