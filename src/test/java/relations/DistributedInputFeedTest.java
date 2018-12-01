@@ -23,7 +23,8 @@ public class DistributedInputFeedTest implements Serializable {
     private Configuration config;
     private Tuple3<R1CSRelationRDD<BN254aFields.BN254aFr>,
             Assignment<BN254aFields.BN254aFr>,
-            JavaPairRDD<Long, BN254aFields.BN254aFr>> distributedFromJSON;
+            JavaPairRDD<Long, BN254aFields.BN254aFr>> r1csFromJSON;
+    private R1CSRelationRDD<BN254aFields.BN254aFr> r1csFromText;
     private String jsonFilePath;
     private String textFilePath;
 
@@ -34,10 +35,10 @@ public class DistributedInputFeedTest implements Serializable {
         config = new Configuration(1, 1, 1, 2, sc, StorageLevel.MEMORY_ONLY());
 
         jsonFilePath = "src/test/data/json/";
-        textFilePath = "src/test/data/text/";
+        textFilePath = "src/test/data/text/cropped_hash";
 
-        distributedFromJSON = FileToR1CS.distributedR1CSFromJSON(jsonFilePath + "pepper_out.json", config);
-//        distributedFromFileExample = FileToR1CS.distributedR1CSFromPlainText(textFilePath);
+        r1csFromJSON = FileToR1CS.distributedR1CSFromJSON(jsonFilePath + "libsnark_tutorial.json", config);
+        r1csFromText = FileToR1CS.distributedR1CSFromText(textFilePath, config);
 
 
     }
@@ -51,11 +52,17 @@ public class DistributedInputFeedTest implements Serializable {
     @Test
     public void distributedR1CSFromJSONTest() {
 
-        assertTrue(distributedFromJSON._1().isValid());
+        assertTrue(r1csFromJSON._1().isValid());
 
-        assertTrue(distributedFromJSON._1().isSatisfied(distributedFromJSON._2(), distributedFromJSON._3()));
+        assertTrue(r1csFromJSON._1().isSatisfied(r1csFromJSON._2(), r1csFromJSON._3()));
     }
 
+    @Test
+    public void distributedR1CSFromTextTest() {
+
+        assertTrue(r1csFromText.isValid());
+
+    }
 
 
 
