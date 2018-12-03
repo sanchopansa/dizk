@@ -63,14 +63,12 @@ public class FileToR1CS {
 
         for (int i = 0; i < constraintArray.length; i++) {
 
-            JSONObject nextA = (JSONObject) constraintArray[i].get(0);
-            JSONObject nextB = (JSONObject) constraintArray[i].get(1);
-            JSONObject nextC = (JSONObject) constraintArray[i].get(2);
-
-
-            final LinearCombination<FieldT> A = JSONObjectToCombination(nextA);
-            final LinearCombination<FieldT> B = JSONObjectToCombination(nextB);
-            final LinearCombination<FieldT> C = JSONObjectToCombination(nextC);
+            final LinearCombination<FieldT> A = JSONObjectToCombination(
+                    (JSONObject) constraintArray[i].get(0));
+            final LinearCombination<FieldT> B = JSONObjectToCombination(
+                    (JSONObject) constraintArray[i].get(1));
+            final LinearCombination<FieldT> C = JSONObjectToCombination(
+                    (JSONObject) constraintArray[i].get(2));
 
             constraints.add(new R1CSConstraint<>(A, B, C));
         }
@@ -320,8 +318,8 @@ public class FileToR1CS {
 
         try {
             String nextLine;
-            reader.mark(1);  // TODO - this is very strange.
             while ((nextLine = reader.readLine()) != null) {
+                reader.mark(100);
                 String[] tokens = nextLine.split(" ");
 
                 int col = Integer.parseInt(tokens[0]);
