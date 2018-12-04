@@ -22,7 +22,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         super(_filePath, _config);
     }
 
-    public R1CSRelationRDD loadR1CS() {
+    public R1CSRelationRDD loadR1CS(String fileName) {
         String[] constraintParameters = new String[3];
         try{
             constraintParameters = new BufferedReader(
@@ -63,7 +63,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     }
 
     @Override
-    public Tuple2<Assignment, JavaPairRDD> loadWitness() {
+    public Tuple2<Assignment, JavaPairRDD> loadWitness(String fileName) {
         // TODO - not urgent
         return null;
     }
