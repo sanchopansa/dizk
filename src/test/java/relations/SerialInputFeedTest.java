@@ -49,12 +49,12 @@ public class SerialInputFeedTest implements Serializable {
         config = new Configuration();
 
         jsonFilePath = "src/test/data/json/";
-        textFilePath = "src/test/data/text/cropped_hash/";
+        textFilePath = "src/test/data/text/contrived/";
 
         r1csFromJSON = FileToR1CS.serialR1CSFromJSON(jsonFilePath + "satisfiable_pepper.json");
 
         // Notice that FromText returns only the constraints.
-        r1csFromText = FileToR1CS.serialR1CSFromPlainText(textFilePath + "cropped_hash");
+        r1csFromText = FileToR1CS.serialR1CSFromText(textFilePath + "small");
     }
 
     @After
@@ -71,6 +71,7 @@ public class SerialInputFeedTest implements Serializable {
     @Test
     public void serialR1CSFromTextTest() {
         assertTrue(r1csFromText.isValid());
+        System.out.println(r1csFromText);
 
     }
 
