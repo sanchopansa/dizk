@@ -89,7 +89,7 @@ public class FileToR1CS {
 
     public static <FieldT extends AbstractFieldElementExpanded<FieldT>>
         R1CSRelation<FieldT>
-    serialR1CSFromPlainText(String filePath) {
+    serialR1CSFromText(String filePath) {
 
         final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
@@ -110,18 +110,9 @@ public class FileToR1CS {
             BufferedReader brC = new BufferedReader(new FileReader(filePath + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
-                //  Start a fresh row for each of A, B, C
-                Tuple2<LinearCombination<FieldT>, BufferedReader> resA = makeRowAt(currRow, brA);
-                final LinearCombination<FieldT> A = resA._1();
-                brA = resA._2();
-
-                Tuple2<LinearCombination<FieldT>, BufferedReader> resB = makeRowAt(currRow, brB);
-                final LinearCombination<FieldT> B = resB._1();
-                brB = resB._2();
-
-                Tuple2<LinearCombination<FieldT>, BufferedReader> resC = makeRowAt(currRow, brC);
-                final LinearCombination<FieldT> C = resC._1();
-                brC = resC._2();
+                LinearCombination<FieldT> A = makeRowAt(currRow, brA);
+                LinearCombination<FieldT> B = makeRowAt(currRow, brB);
+                LinearCombination<FieldT> C = makeRowAt(currRow, brC);
 
                 constraints.add(new R1CSConstraint<>(A, B, C));
             }
@@ -171,13 +162,13 @@ public class FileToR1CS {
         final ArrayList<Integer> partitions = constructPartitionArray(config.numPartitions(), numConstraints);
 
         // Load Linear Combinations as RDD format
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = makeDistributedCombinationFromJSON(
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombinationFromJSON(
                 config, partitions, constraintArray, 0, numConstraints);
 
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = makeDistributedCombinationFromJSON(
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombinationFromJSON(
                 config, partitions, constraintArray, 1, numConstraints);
 
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = makeDistributedCombinationFromJSON(
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = distributedCombinationFromJSON(
                 config, partitions, constraintArray, 2, numConstraints);
 
         // Serial assignment may not be necessary.
@@ -311,7 +302,7 @@ public class FileToR1CS {
     }
 
     private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-        Tuple2<LinearCombination<FieldT>, BufferedReader>
+        LinearCombination<FieldT>
     makeRowAt (long index, BufferedReader reader) {
         // Assumes input to be ordered by row and that the last line is blank.
         final LinearCombination<FieldT> L = new LinearCombination<>();
@@ -319,29 +310,29 @@ public class FileToR1CS {
         try {
             String nextLine;
             while ((nextLine = reader.readLine()) != null) {
-                reader.mark(100);
                 String[] tokens = nextLine.split(" ");
 
                 int col = Integer.parseInt(tokens[0]);
-                long row = Integer.parseInt(tokens[1]);
-                final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(tokens[2]);
+                int row = Integer.parseInt(tokens[1]);
+                assert(row >= index);
 
                 if (index == row) {
-                    L.add(new LinearTerm<>(col, (FieldT) value));
+                    reader.mark(100);
+                    L.add(new LinearTerm<>(col, (FieldT) new BN254aFields.BN254aFr(tokens[2])));
                 } else if (row > index) {
                     reader.reset();
-                    return new Tuple2<>(L, reader);
+                    return L;
                 }
             }
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
-        return new Tuple2<>(L, reader);
+        return L;
     }
 
     private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
         JavaPairRDD<Long, LinearTerm<FieldT>>
-    makeDistributedCombinationFromJSON(
+    distributedCombinationFromJSON(
             Configuration config,
             ArrayList<Integer> partitions,
             JSONArray[] constraintArray,
@@ -396,29 +387,36 @@ public class FileToR1CS {
         // Need at least one constraint per partition!
         assert(numConstraints >= numPartitions);
 
-        return config.sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
-            final long partSize = part == numPartitions ? numConstraints %
-                    (numConstraints / numPartitions) : numConstraints / numPartitions;
+        JavaPairRDD<Long, LinearTerm<FieldT>> result;
+        try {
+            final BufferedReader br = new BufferedReader(new FileReader(fileName));
+            // Not gonna work. Buffered reader gets reopened for each partition. May need to partition the file.
 
-            BufferedReader br = new BufferedReader(new FileReader(fileName));
+            result = config.sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
+                final long partSize = part == numPartitions ? numConstraints %
+                        (numConstraints / numPartitions) : numConstraints / numPartitions;
 
-            final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> T = new ArrayList<>();
-            for (long i = 0; i < partSize; i++) {
+                final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> T = new ArrayList<>();
+                for (long i = 0; i < partSize; i++) {
 
-                final long index = part * (numConstraints / numPartitions) + i;
+                    final long index = part * (numConstraints / numPartitions) + i;
 
-                Tuple2<LinearCombination<FieldT>, BufferedReader> res = makeRowAt(index, br);
-                final LinearCombination<FieldT> combinationA = res._1();
-                br = res._2();
+                    LinearCombination<FieldT> combinationA = makeRowAt(index, br);
 
-                for (LinearTerm term: combinationA.terms()) {
-                    T.add(new Tuple2<>(index, term));
+                    for (LinearTerm term: combinationA.terms()) {
+                        T.add(new Tuple2<>(index, term));
+                    }
+
                 }
-
-            }
+                return T.iterator();
+            });
             br.close();
-            return T.iterator();
-        });
+            return result;
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+        }
+        return null;
+
     }
 
     private static ArrayList<Integer> constructPartitionArray(int numPartitions, long numConstraints){
