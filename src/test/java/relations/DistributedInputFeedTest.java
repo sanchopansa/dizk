@@ -38,7 +38,7 @@ public class DistributedInputFeedTest implements Serializable {
         textFilePath = "src/test/data/text/contrived/small";
 
         r1csFromJSON = FileToR1CS.distributedR1CSFromJSON(jsonFilePath + "satisfiable_pepper.json", config);
-        r1csFromText = FileToR1CS.distributedR1CSFromText(textFilePath, config);
+//        r1csFromText = FileToR1CS.distributedR1CSFromText(textFilePath, config);
 
 
     }
@@ -57,12 +57,6 @@ public class DistributedInputFeedTest implements Serializable {
         assertTrue(r1csFromJSON._1().isSatisfied(r1csFromJSON._2(), r1csFromJSON._3()));
     }
 
-    @Test
-    public void distributedR1CSFromTextTest() {
-
-        assertTrue(r1csFromText.isValid());
-
-    }
 
 
 

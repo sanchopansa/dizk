@@ -33,7 +33,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         JSONArray constraintList = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
+            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
 
             jsonObject = (JSONObject) obj;
             header = (JSONArray) jsonObject.get("header");
@@ -43,8 +43,8 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             e.printStackTrace();
         }
 
-        int numInputs = (int) header.get(0);
-        int numAuxiliary = (int) header.get(1);
+        int numInputs = Integer.parseInt((String) header.get(0));
+        int numAuxiliary = Integer.parseInt((String) header.get(1));
 
         // TODO - do we really need to load this into an ArrayList?
         int numConstraints = constraintList.size();
@@ -93,7 +93,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         JSONArray auxInputs = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
+            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
 
             jsonObject = (JSONObject) obj;
             primaryInputs = (JSONArray) jsonObject.get("primary_input");
