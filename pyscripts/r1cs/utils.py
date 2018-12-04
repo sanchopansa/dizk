@@ -35,21 +35,11 @@ def pepper_to_json(file_source_path, filename):
         for item in content:
             res['aux_input'].append(item.strip())
 
-    prep_list = []
-    for i, end_tag in enumerate(['a', 'b', 'c']):
-        prep_list.append(defaultdict(dict))
-        with open(file_source_path + filename + end_tag) as file:
-            content = file.readlines()
-            for line in content:
-                c, r, v = map(int, line.strip().split())
-                prep_list[i][r][c] = v
-
-    a_rows = prep_list[0]
-    b_rows = prep_list[1]
-    c_rows = prep_list[2]
+    a_rows = load_r1cs_matrix(file_source_path + filename + 'a')
+    b_rows = load_r1cs_matrix(file_source_path + filename + 'b')
+    c_rows = load_r1cs_matrix(file_source_path + filename + 'c')
 
     row_at = 0
-
     while any([a_rows, b_rows, c_rows]):
         res['constraints'].append([a_rows[row_at], b_rows[row_at], c_rows[row_at]])
         del a_rows[row_at]
@@ -63,3 +53,14 @@ def pepper_to_json(file_source_path, filename):
 def export_pepper_to_json(file_source_path, filename):
     with open(file_source_path + filename + '.json', 'w') as file:
         file.write(pepper_to_json(file_source_path, filename))
+
+
+def load_r1cs_matrix(file_name):
+    res = defaultdict(dict)
+    with open(file_name) as file:
+        content = file.readlines()
+    for line in content:
+        column, row, value = map(int, line.strip().split())
+        res[row][column] = value
+
+    return res
