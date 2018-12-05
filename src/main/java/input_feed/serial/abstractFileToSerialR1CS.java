@@ -18,6 +18,5 @@ public abstract class abstractFileToSerialR1CS<FieldT extends AbstractFieldEleme
 
     public abstract R1CSRelation<FieldT> loadR1CS(String fileName);
 
-
     public abstract Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness(String fileName);
 }
