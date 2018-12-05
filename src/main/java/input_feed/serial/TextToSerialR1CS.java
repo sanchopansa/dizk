@@ -95,11 +95,11 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
     private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
     LinearCombination<FieldT>
     makeRowAt (long index, BufferedReader reader) {
-        // Assumes input to be ordered by row and that the last line is blank.
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         try {
             String nextLine;
+            reader.mark(100);
             while ((nextLine = reader.readLine()) != null) {
                 String[] tokens = nextLine.split(" ");
 

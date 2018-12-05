@@ -58,11 +58,7 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             constraints.add(new R1CSConstraint<>(A, B, C));
         }
 
-        final R1CSRelation<FieldT> r1cs = new R1CSRelation<>(constraints, numInputs, numAuxiliary);
-
-        assert (r1cs.isValid());
-
-        return r1cs;
+        return new R1CSRelation<>(constraints, numInputs, numAuxiliary);
     }
 
     public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness (String fileName) {
@@ -82,23 +78,17 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             e.printStackTrace();
         }
 
-        final Assignment<FieldT> oneFullAssignment = new Assignment<>();
-
-        int numInputs = primaryInputs.size();
-        for (int i = 0; i < numInputs; i++) {
+        final Assignment<FieldT> primary = new Assignment<>();
+        for (int i = 0; i < primaryInputs.size(); i++) {
             final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) primaryInputs.get(i));
-            oneFullAssignment.add((FieldT) value);
+            primary.add((FieldT) value);
         }
 
-        int numAuxiliary = auxInputs.size();
-        for (int i = 0; i < numAuxiliary; i++) {
+        final Assignment<FieldT> auxiliary = new Assignment<>();
+        for (int i = 0; i < auxInputs.size(); i++) {
             final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) auxInputs.get(i));
-            oneFullAssignment.add((FieldT) value);
+            auxiliary.add((FieldT) value);
         }
-
-        final Assignment<FieldT> primary = new Assignment<>(oneFullAssignment.subList(0, numInputs));
-        final Assignment<FieldT> auxiliary = new Assignment<>(oneFullAssignment
-                .subList(numInputs, oneFullAssignment.size()));
 
         return new Tuple2<>(primary, auxiliary);
     }

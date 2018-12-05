@@ -103,7 +103,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             e.printStackTrace();
         }
 
-        // Serial assignment may not be necessary.
+        // TODO - Serial assignment may not be necessary.
         final Assignment<FieldT> serialAssignment = new Assignment<>();
         int numInputs = primaryInputs.size();
         for (int i = 0; i < numInputs; i++) {
@@ -117,10 +117,6 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         }
 
         final long numVariables = numInputs + numAuxiliary;
-//        final int numPartitions = config.numPartitions();
-//        final ArrayList<Integer> variablePartitions = constructPartitionArray(config.numPartitions(), numVariables);
-
-
         final int numExecutors = this.config().numExecutors();
         final ArrayList<Integer> assignmentPartitions = constructPartitionArray(numExecutors, numVariables);
 

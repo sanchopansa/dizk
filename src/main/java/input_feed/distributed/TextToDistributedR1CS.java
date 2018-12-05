@@ -92,7 +92,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             System.err.println("Error: " + e.getMessage());
         }
 
-
         int totalSize = numInputs + numAuxiliary;
 
         final int numExecutors = this.config().numExecutors();
@@ -117,14 +116,10 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     return assignment.iterator();
                 }).persist(this.config().storageLevel());
 
-
         final Assignment<FieldT> primary = new Assignment<>(serialAssignment.subList(0, numInputs));
-
 
         return new Tuple2<>(primary, distributedAssignment);
     }
-
-
 
     private JavaPairRDD<Long, LinearTerm<FieldT>>
     distributedCombination(
@@ -134,7 +129,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     ){
         final int numPartitions = this.config().numPartitions();
 
-        // Need at least one constraint per partition!
+        // Require at least one constraint per partition!
         assert(numConstraints >= numPartitions);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> result;
@@ -142,7 +137,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
             final BufferedReader br = new BufferedReader(new FileReader(fileName));
             // TODO - this is not the best for performance
-            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br, numConstraints);
+            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br);
 
             result = this.config().sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
                 final long partSize = part == numPartitions ? numConstraints %
@@ -170,39 +165,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return null;
     }
 
-    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
-    LinearCombination<FieldT>
-    makeRowAt (long index, BufferedReader reader) {
-        // Assumes input to be ordered by row and that the last line is blank.
-        final LinearCombination<FieldT> L = new LinearCombination<>();
-
-        try {
-            String nextLine;
-            while ((nextLine = reader.readLine()) != null) {
-                String[] tokens = nextLine.split(" ");
-
-                int col = Integer.parseInt(tokens[0]);
-                int row = Integer.parseInt(tokens[1]);
-                assert (row >= index);
-
-                if (index == row) {
-                    reader.mark(100);
-                    L.add(new LinearTerm<>(col, (FieldT) new BN254aFields.BN254aFr(tokens[2])));
-                } else if (row > index) {
-                    reader.reset();
-                    return L;
-                }
-            }
-        } catch (Exception e){
-            System.err.println("Error: " + e.getMessage());
-        }
-        return L;
-    }
-
     public <FieldT extends AbstractFieldElementExpanded<FieldT>> Map<Integer, LinearCombination<FieldT>>
-    serializeReader(BufferedReader br, int numConstraints) {
+    serializeReader(BufferedReader br) {
         int index = 0;
-//        ArrayList<LinearCombination<FieldT>> constraintList = new ArrayList<>();
         Map<Integer, LinearCombination<FieldT>> constraintMap = new HashMap<>();
         LinearCombination<FieldT> L = new LinearCombination<>();
         try {
@@ -220,7 +185,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     br.mark(100);
                 } else if (row > index) {
                     constraintMap.put(index, L);
-//                    constraintList.add(index, L);
                     L = new LinearCombination<>();
                     br.reset();
                     index++;
@@ -229,10 +193,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
-        // In case the last few rows are zero.
-//        while (index < numConstraints) {
-//            constraintList.add(new LinearCombination<>());
-//        }
         return constraintMap;
     }
 }
