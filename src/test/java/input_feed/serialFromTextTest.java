@@ -15,7 +15,7 @@ import java.io.Serializable;
 import static org.junit.Assert.assertTrue;
 
 public class serialFromTextTest implements Serializable {
-    private TextToSerialR1CS converter;
+    private TextToSerialR1CS<BN254aFields.BN254aFr> converter;
     private R1CSRelation<BN254aFields.BN254aFr> r1cs;
     private Tuple2<Assignment<BN254aFields.BN254aFr>,
             Assignment<BN254aFields.BN254aFr>> witness;
@@ -24,7 +24,7 @@ public class serialFromTextTest implements Serializable {
     @Before
     public void setUp() {
         String textFilePath = "src/test/data/text/";
-        converter = new TextToSerialR1CS(textFilePath);
+        converter = new TextToSerialR1CS<>(textFilePath);
     }
 
     @After
@@ -36,6 +36,7 @@ public class serialFromTextTest implements Serializable {
         String fileName = "overflow/overflow";
         r1cs = converter.loadR1CS(fileName);
         assertTrue(r1cs.isValid());
+
         witness = converter.loadWitness(fileName);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
@@ -45,6 +46,7 @@ public class serialFromTextTest implements Serializable {
         String fileName = "contrived/small";
         r1cs = converter.loadR1CS(fileName);
         assertTrue(r1cs.isValid());
+
         witness = converter.loadWitness(fileName);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }

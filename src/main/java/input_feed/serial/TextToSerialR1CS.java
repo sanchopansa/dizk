@@ -55,7 +55,7 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
     }
 
     @Override
-    public Tuple2<Assignment, Assignment> loadWitness(String fileName) {
+    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness(String fileName) {
 
         Assignment<FieldT> primary = new Assignment<>();
         Assignment<FieldT> auxiliary = new Assignment<>();
