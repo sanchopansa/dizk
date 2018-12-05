@@ -14,7 +14,8 @@ import scala.Tuple2;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
     extends abstractFileToDistributedR1CS {
@@ -43,10 +44,8 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombination(
                 this.filePath() + fileName + ".a", partitions, numConstraints);
-
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombination(
                 this.filePath() + fileName + ".b", partitions, numConstraints);
-
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = distributedCombination(
                 this.filePath() + fileName + ".c", partitions, numConstraints);
 
@@ -143,7 +142,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
             final BufferedReader br = new BufferedReader(new FileReader(fileName));
             // TODO - this is not the best for performance
-            ArrayList<LinearCombination<FieldT>> constraintArray = serializeReader(br, numConstraints);
+            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br, numConstraints);
 
             result = this.config().sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
                 final long partSize = part == numPartitions ? numConstraints %
@@ -153,12 +152,13 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                 for (long i = 0; i < partSize; i++) {
 
                     final long index = part * (numConstraints / numPartitions) + i;
-                    LinearCombination<FieldT> currRow = constraintArray.get((int) index);
 
-                    for (LinearTerm term: currRow.terms()) {
-                        T.add(new Tuple2<>(index, term));
+                    if (constraintMap.containsKey((int) index)){
+                        LinearCombination<FieldT> currRow = constraintMap.get((int) index);
+                        for (LinearTerm term: currRow.terms()) {
+                            T.add(new Tuple2<>(index, term));
+                        }
                     }
-
                 }
                 return T.iterator();
             });
@@ -199,24 +199,29 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return L;
     }
 
-    public <FieldT extends AbstractFieldElementExpanded<FieldT>> ArrayList<LinearCombination<FieldT>>
+    public <FieldT extends AbstractFieldElementExpanded<FieldT>> Map<Integer, LinearCombination<FieldT>>
     serializeReader(BufferedReader br, int numConstraints) {
         int index = 0;
-        ArrayList<LinearCombination<FieldT>> constraintList = new ArrayList<>();
+//        ArrayList<LinearCombination<FieldT>> constraintList = new ArrayList<>();
+        Map<Integer, LinearCombination<FieldT>> constraintMap = new HashMap<>();
+        LinearCombination<FieldT> L = new LinearCombination<>();
         try {
             String nextLine;
+            br.mark(100);
             while ((nextLine = br.readLine()) != null) {
                 String[] tokens = nextLine.split(" ");
                 int col = Integer.parseInt(tokens[0]);
                 int row = Integer.parseInt(tokens[1]);
                 BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(tokens[2]);
+                assert (row >= index);
 
-                final LinearCombination<FieldT> L = new LinearCombination<>();
                 if (row == index) {
                     L.add(new LinearTerm<>(col, (FieldT) value));
                     br.mark(100);
                 } else if (row > index) {
-                    constraintList.add(index, L);
+                    constraintMap.put(index, L);
+//                    constraintList.add(index, L);
+                    L = new LinearCombination<>();
                     br.reset();
                     index++;
                 }
@@ -224,6 +229,10 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
-        return constraintList;
+        // In case the last few rows are zero.
+//        while (index < numConstraints) {
+//            constraintList.add(new LinearCombination<>());
+//        }
+        return constraintMap;
     }
 }
