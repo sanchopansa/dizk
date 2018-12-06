@@ -1,6 +1,6 @@
 package input_feed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import configuration.Configuration;
 import input_feed.distributed.TextToDistributedR1CS;
@@ -21,12 +21,11 @@ import static org.junit.Assert.assertTrue;
 
 public class distributedFromTextTest implements Serializable {
     private transient JavaSparkContext sc;
-    private TextToDistributedR1CS<BN254aFields.BN254aFr> converter;
-    private R1CSRelationRDD<BN254aFields.BN254aFr> r1cs;
-    private Tuple2<Assignment<BN254aFields.BN254aFr>,
-            JavaPairRDD<Long, BN254aFields.BN254aFr>> witness;
-    private BN254aFrParameters FpParameters;
     private Configuration config;
+    private BN254aFrParameters FpParameters;
+    private TextToDistributedR1CS<BN254aFr> converter;
+    private R1CSRelationRDD<BN254aFr> r1cs;
+    private Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness;
 
     @Before
     public void setUp() {
@@ -36,8 +35,7 @@ public class distributedFromTextTest implements Serializable {
         int numMemory = 1;
         int numPartitions = 2;
 
-        config = new Configuration(
-                numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
         FpParameters = new BN254aFrParameters();
     }
 
@@ -51,6 +49,7 @@ public class distributedFromTextTest implements Serializable {
     public void distributedR1CSFromTextTest() {
         String fileName = "src/test/data/text/contrived/small";
         converter = new TextToDistributedR1CS<>(fileName, config, FpParameters);
+
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
 
