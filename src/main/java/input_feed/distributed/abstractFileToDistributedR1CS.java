@@ -1,6 +1,7 @@
 package input_feed.distributed;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
@@ -13,25 +14,29 @@ public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractField
 
     private final String filePath;
     private final Configuration config;
+    private final AbstractFpParameters fieldParameters;
 
-    public abstractFileToDistributedR1CS(final String _filePath, final Configuration _config) {
+    abstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final AbstractFpParameters _fieldParameters) {
         filePath = _filePath;
         config = _config;
+        fieldParameters = _fieldParameters;
     }
 
-    public String filePath() {
+    String filePath() {
         return filePath;
     }
 
-    public Configuration config() {
+    Configuration config() {
         return config;
     }
 
-    public abstract R1CSRelationRDD<FieldT> loadR1CS(String fileName);
+    AbstractFpParameters fieldParameters() { return fieldParameters; }
 
-    public abstract Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness(String fileName);
+    public abstract R1CSRelationRDD<FieldT> loadR1CS();
 
-    public static ArrayList<Integer>
+    public abstract Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness();
+
+    static ArrayList<Integer>
     constructPartitionArray(int numPartitions, long numConstraints){
         final ArrayList<Integer> partitions = new ArrayList<>();
         for (int i = 0; i < numPartitions; i++) {

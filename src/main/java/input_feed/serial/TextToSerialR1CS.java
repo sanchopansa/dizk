@@ -1,7 +1,8 @@
 package input_feed.serial;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.Fp;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import relations.objects.*;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
@@ -11,12 +12,12 @@ import java.io.FileReader;
 
 public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS {
 
-    public TextToSerialR1CS(String _filePath) {
-        super(_filePath);
+    public TextToSerialR1CS(String _filePath, AbstractFpParameters _fieldParameters) {
+        super(_filePath, _fieldParameters);
     }
 
     @Override
-    public R1CSRelation<FieldT> loadR1CS(String fileName) {
+    public R1CSRelation<FieldT> loadR1CS() {
         final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
         int numInputs = -1;
@@ -24,16 +25,16 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
         try{
             String[] constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".problem_size")).readLine().split(" ");
+                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
 
             numInputs = Integer.parseInt(constraintParameters[0]);
             numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
             int numConstraints = Integer.parseInt(constraintParameters[2]);
 
-            BufferedReader brA = new BufferedReader(new FileReader(this.filePath() + fileName + ".a"));
-            BufferedReader brB = new BufferedReader(new FileReader(this.filePath() + fileName + ".b"));
-            BufferedReader brC = new BufferedReader(new FileReader(this.filePath() + fileName + ".c"));
+            BufferedReader brA = new BufferedReader(new FileReader(this.filePath() + ".a"));
+            BufferedReader brB = new BufferedReader(new FileReader(this.filePath() + ".b"));
+            BufferedReader brC = new BufferedReader(new FileReader(this.filePath() + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
                 LinearCombination<FieldT> A = makeRowAt(currRow, brA);
@@ -55,27 +56,27 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
     }
 
     @Override
-    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness(String fileName) {
+    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness() {
 
         Assignment<FieldT> primary = new Assignment<>();
         Assignment<FieldT> auxiliary = new Assignment<>();
 
         try{
             String[] constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".problem_size")).readLine().split(" ");
+                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
 
             int numInputs = Integer.parseInt(constraintParameters[0]);
             int numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
             BufferedReader br = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".witness"));
+                    new FileReader(this.filePath() + ".witness"));
 
             final Assignment<FieldT> oneFullAssignment = new Assignment<>();
 
             String nextLine;
             int count = 0;
             while ((nextLine = br.readLine()) != null) {
-                final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(nextLine);
+                final Fp value = new Fp(nextLine, this.fieldParameters());
                 oneFullAssignment.add((FieldT) value);
                 count++;
             }
@@ -92,14 +93,15 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+    private <FieldT extends AbstractFieldElementExpanded<FieldT>>
     LinearCombination<FieldT>
     makeRowAt (long index, BufferedReader reader) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         try {
+            final int readAheadLimit = 100;
             String nextLine;
-            reader.mark(100);
+            reader.mark(readAheadLimit);
             while ((nextLine = reader.readLine()) != null) {
                 String[] tokens = nextLine.split(" ");
 
@@ -108,8 +110,9 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
                 assert (row >= index);
 
                 if (index == row) {
-                    reader.mark(100);
-                    L.add(new LinearTerm<>(col, (FieldT) new BN254aFields.BN254aFr(tokens[2])));
+                    reader.mark(readAheadLimit);
+                    Fp value = new Fp(tokens[2], this.fieldParameters());
+                    L.add(new LinearTerm<>(col, (FieldT) value));
                 } else if (row > index) {
                     reader.reset();
                     return L;

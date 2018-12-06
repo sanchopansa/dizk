@@ -1,7 +1,8 @@
 package input_feed.distributed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.Fp;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
@@ -20,16 +21,18 @@ import java.util.HashMap;
 public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
     extends abstractFileToDistributedR1CS {
 
-    public TextToDistributedR1CS(final String _filePath, final Configuration _config) {
-        super(_filePath, _config);
+    public TextToDistributedR1CS(
+            final String _filePath,
+            final Configuration _config,
+            AbstractFpParameters _fieldParameters) {
+        super(_filePath, _config, _fieldParameters);
     }
 
-    public R1CSRelationRDD<FieldT> loadR1CS(String fileName) {
+    public R1CSRelationRDD<FieldT> loadR1CS() {
         String[] constraintParameters = new String[3];
         try{
             constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".problem_size")).readLine().split(" ");
-
+                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
@@ -43,11 +46,11 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombination(
-                this.filePath() + fileName + ".a", partitions, numConstraints);
+                this.filePath() + ".a", partitions, numConstraints);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombination(
-                this.filePath() + fileName + ".b", partitions, numConstraints);
+                this.filePath() + ".b", partitions, numConstraints);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = distributedCombination(
-                this.filePath() + fileName + ".c", partitions, numConstraints);
+                this.filePath() + ".c", partitions, numConstraints);
 
         linearCombinationA.count();
         linearCombinationB.count();
@@ -63,7 +66,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     }
 
     @Override
-    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness(String fileName) {
+    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness() {
 
         final Assignment<FieldT> serialAssignment = new Assignment<>();
         int numInputs = -1;
@@ -71,18 +74,18 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         try{
             String[] constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".problem_size")).readLine().split(" ");
+                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
 
             numInputs = Integer.parseInt(constraintParameters[0]);
             numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
             BufferedReader br = new BufferedReader(
-                    new FileReader(this.filePath() + fileName + ".witness"));
+                    new FileReader(this.filePath() + ".witness"));
 
             String nextLine;
             int count = 0;
             while ((nextLine = br.readLine()) != null) {
-                final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(nextLine);
+                final Fp value = new Fp(nextLine, this.fieldParameters());
                 serialAssignment.add((FieldT) value);
                 count++;
             }
@@ -177,13 +180,13 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                 String[] tokens = nextLine.split(" ");
                 int col = Integer.parseInt(tokens[0]);
                 int row = Integer.parseInt(tokens[1]);
-                BN254aFields.BN254aFr value = new BN254aFields.BN254aFr(tokens[2]);
                 assert (row >= index);
 
                 if (row == index) {
+                    Fp value = new Fp(tokens[2], this.fieldParameters());
                     L.add(new LinearTerm<>(col, (FieldT) value));
                     br.mark(100);
-                } else if (row > index) {
+                } else {
                     constraintMap.put(index, L);
                     L = new LinearCombination<>();
                     br.reset();

@@ -1,7 +1,9 @@
 package input_feed.distributed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.Fp;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.json.simple.JSONArray;
@@ -15,17 +17,20 @@ import scala.Tuple2;
 
 import java.io.FileReader;
 import java.util.ArrayList;
-import java.util.Iterator;
 
 public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
         extends abstractFileToDistributedR1CS {
 
-    public JSONToDistributedR1CS(final String _filePath, final Configuration _config) {
-        super(_filePath, _config);
+    public JSONToDistributedR1CS(
+            final String _filePath,
+            final Configuration _config,
+            BN254aFrParameters _fpParameters
+    ) {
+        super(_filePath, _config, _fpParameters);
     }
 
     @Override
-    public R1CSRelationRDD<FieldT> loadR1CS(String fileName) {
+    public R1CSRelationRDD<FieldT> loadR1CS() {
 
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
@@ -33,7 +38,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         JSONArray constraintList = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
+            Object obj = parser.parse(new FileReader(this.filePath()));
 
             jsonObject = (JSONObject) obj;
             header = (JSONArray) jsonObject.get("header");
@@ -70,30 +75,20 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         combinationC.count();
 
         final R1CSConstraintsRDD<FieldT> constraints = new R1CSConstraintsRDD<>(
-                combinationA,
-                combinationB,
-                combinationC,
-                numConstraints);
+                combinationA, combinationB, combinationC, numConstraints);
 
-        final R1CSRelationRDD<FieldT> r1cs = new R1CSRelationRDD<>(
-                constraints,
-                numInputs,
-                numAuxiliary);
-
-        assert (r1cs.isValid());
-
-        return r1cs;
+        return new R1CSRelationRDD<>(constraints, numInputs, numAuxiliary);
     }
 
     @Override
-    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness(String fileName) {
+    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness() {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray primaryInputs = new JSONArray();
         JSONArray auxInputs = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
+            Object obj = parser.parse(new FileReader(this.filePath()));
 
             jsonObject = (JSONObject) obj;
             primaryInputs = (JSONArray) jsonObject.get("primary_input");
@@ -105,18 +100,16 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         // TODO - Serial assignment may not be necessary.
         final Assignment<FieldT> serialAssignment = new Assignment<>();
-        int numInputs = primaryInputs.size();
-        for (int i = 0; i < numInputs; i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) primaryInputs.get(i));
+        for (Object input: primaryInputs) {
+            final Fp value = new Fp((String) input, this.fieldParameters());
             serialAssignment.add((FieldT) value);
         }
-        int numAuxiliary = auxInputs.size();
-        for (int i = 0; i < numAuxiliary; i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) auxInputs.get(i));
+        for (Object input: auxInputs) {
+            final Fp value = new Fp((String) input, this.fieldParameters());
             serialAssignment.add((FieldT) value);
         }
 
-        final long numVariables = numInputs + numAuxiliary;
+        final long numVariables = primaryInputs.size() + auxInputs.size();
         final int numExecutors = this.config().numExecutors();
         final ArrayList<Integer> assignmentPartitions = constructPartitionArray(numExecutors, numVariables);
 
@@ -133,7 +126,8 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     return assignment.iterator();
                 }).persist(this.config().storageLevel());
 
-        final Assignment<FieldT> primary = new Assignment<>(serialAssignment.subList(0, numInputs));
+        final Assignment<FieldT> primary = new Assignment<>(
+                serialAssignment.subList(0, primaryInputs.size()));
 
         oneFullAssignment.count();
 
@@ -149,6 +143,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     ){
         final int numPartitions = this.config().numPartitions();
         assert(numConstraints >= numPartitions);
+        final AbstractFpParameters fieldParams = this.fieldParameters();
 
         return this.config().sparkContext()
                 .parallelize(partitions, numPartitions).flatMapToPair(part -> {
@@ -160,21 +155,19 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                         final long index = part * (numConstraints / numPartitions) + i;
 
                         JSONObject next = (JSONObject) constraintArray[(int) index].get(constraintArrayIndex);
-                        Iterator<String> keys = next.keySet().iterator();
-                        while (keys.hasNext()) {
-                            String key = keys.next();
 
+                        for (Object keyObj: next.keySet()) {
+                            String key = keyObj.toString();
                             long columnIndex = Long.parseLong(key);
-                            BN254aFields.BN254aFr value;
+                            Fp value;
                             try{
-                                value = new BN254aFields.BN254aFr((String) next.get(key));
+                                value = new Fp((String) next.get(key), fieldParams);
                             } catch (ClassCastException e){
                                 // Handle case when key-value pairs are String: Long
-                                value = new BN254aFields.BN254aFr(Long.toString((long) next.get(key)));
+                                value = new Fp(Long.toString((long) next.get(key)), fieldParams);
                             }
                             T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
                         }
-
                     }
                     return T.iterator();
                 });

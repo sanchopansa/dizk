@@ -1,22 +1,28 @@
 package input_feed.serial;
 
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
 public abstract class abstractFileToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
     private final String filePath;
+    private final AbstractFpParameters fieldParameters;
 
-    public abstractFileToSerialR1CS(final String _filePath) {
+    abstractFileToSerialR1CS(
+            final String _filePath, final AbstractFpParameters _fieldParameters) {
         filePath = _filePath;
+        fieldParameters = _fieldParameters;
     }
 
-    public String filePath() {
+    String filePath() {
         return filePath;
     }
 
-    public abstract R1CSRelation<FieldT> loadR1CS(String fileName);
+    AbstractFpParameters fieldParameters() { return fieldParameters; }
 
-    public abstract Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness(String fileName);
+    public abstract R1CSRelation<FieldT> loadR1CS();
+
+    public abstract Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness();
 }

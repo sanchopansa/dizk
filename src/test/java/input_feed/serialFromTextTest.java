@@ -2,6 +2,7 @@ package input_feed;
 
 import algebra.curves.barreto_naehrig.bn254a.*;
 
+import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import input_feed.serial.TextToSerialR1CS;
 import org.junit.After;
 import org.junit.Before;
@@ -19,12 +20,12 @@ public class serialFromTextTest implements Serializable {
     private R1CSRelation<BN254aFields.BN254aFr> r1cs;
     private Tuple2<Assignment<BN254aFields.BN254aFr>,
             Assignment<BN254aFields.BN254aFr>> witness;
+    private BN254aFrParameters FpParameters;
 
 
     @Before
     public void setUp() {
-        String textFilePath = "src/test/data/text/";
-        converter = new TextToSerialR1CS<>(textFilePath);
+        FpParameters = new BN254aFrParameters();
     }
 
     @After
@@ -33,21 +34,23 @@ public class serialFromTextTest implements Serializable {
 
     @Test
     public void tinySerialR1CSFromTextTest() {
-        String fileName = "overflow/overflow";
-        r1cs = converter.loadR1CS(fileName);
+        String fileName = "src/test/data/text/overflow/overflow";
+        converter = new TextToSerialR1CS<>(fileName, FpParameters);
+        r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness(fileName);
+        witness = converter.loadWitness();
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
     @Test
     public void smallSerialR1CSFromTextTest() {
-        String fileName = "contrived/small";
-        r1cs = converter.loadR1CS(fileName);
+        String fileName = "src/test/data/text/contrived/small";
+        converter = new TextToSerialR1CS<>(fileName, FpParameters);
+        r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness(fileName);
+        witness = converter.loadWitness();
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
