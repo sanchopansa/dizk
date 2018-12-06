@@ -1,7 +1,8 @@
 package input_feed.serial;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
 import algebra.fields.AbstractFieldElementExpanded;
+import algebra.fields.Fp;
+import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -10,28 +11,26 @@ import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
 import java.io.FileReader;
-import java.util.Iterator;
 
-public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS {
+public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
+        extends abstractFileToSerialR1CS {
 
-    public JSONToSerialR1CS(String _filePath) {
-        super(_filePath);
+    public JSONToSerialR1CS(String _filePath, AbstractFpParameters _fieldParameters) {
+        super(_filePath, _fieldParameters);
     }
 
     @Override
-    public R1CSRelation<FieldT> loadR1CS(String fileName) {
+    public R1CSRelation<FieldT> loadR1CS() {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray header = new JSONArray();
         JSONArray constraintList = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
-
+            Object obj = parser.parse(new FileReader(this.filePath()));
             jsonObject = (JSONObject) obj;
             header = (JSONArray) jsonObject.get("header");
             constraintList = (JSONArray) jsonObject.get("constraints");
-
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -61,14 +60,14 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new R1CSRelation<>(constraints, numInputs, numAuxiliary);
     }
 
-    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness (String fileName) {
+    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness () {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray primaryInputs = new JSONArray();
         JSONArray auxInputs = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath() + fileName));
+            Object obj = parser.parse(new FileReader(this.filePath()));
 
             jsonObject = (JSONObject) obj;
             primaryInputs = (JSONArray) jsonObject.get("primary_input");
@@ -79,34 +78,32 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         }
 
         final Assignment<FieldT> primary = new Assignment<>();
-        for (int i = 0; i < primaryInputs.size(); i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) primaryInputs.get(i));
+        for (Object element: primaryInputs) {
+            final Fp value = new Fp((String) element, this.fieldParameters());
             primary.add((FieldT) value);
         }
 
         final Assignment<FieldT> auxiliary = new Assignment<>();
-        for (int i = 0; i < auxInputs.size(); i++) {
-            final BN254aFields.BN254aFr value = new BN254aFields.BN254aFr((String) auxInputs.get(i));
+        for (Object element: auxInputs) {
+            final Fp value = new Fp((String) element, this.fieldParameters());
             auxiliary.add((FieldT) value);
         }
 
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private static <FieldT extends AbstractFieldElementExpanded<FieldT>>
+    private <FieldT extends AbstractFieldElementExpanded<FieldT>>
     LinearCombination<FieldT>
     serialCombinationFromJSON (final JSONObject matrixRow) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
-        Iterator<String> keys = matrixRow.keySet().iterator();
-        while (keys.hasNext()) {
-            String key = keys.next();
-            // TODO - don't hardcode the field!
-            BN254aFields.BN254aFr value;
+        for (Object keyObj: matrixRow.keySet()) {
+            String key = (String) keyObj;
+            Fp value;
             try{
-                value = new BN254aFields.BN254aFr((String) matrixRow.get(key));
+                value = new Fp((String) matrixRow.get(key), this.fieldParameters());
             } catch (ClassCastException e){
-                value = new BN254aFields.BN254aFr(Long.toString((long) matrixRow.get(key)));
+                value = new Fp(Long.toString((long) matrixRow.get(key)), this.fieldParameters());
             }
             L.add(new LinearTerm<>(Long.parseLong(key), (FieldT) value));
         }

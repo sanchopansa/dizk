@@ -1,6 +1,7 @@
 package input_feed;
 
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import configuration.Configuration;
 import input_feed.distributed.JSONToDistributedR1CS;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -21,6 +22,8 @@ import static org.junit.Assert.assertTrue;
 public class distributedFromJSONTest implements Serializable {
     private transient JavaSparkContext sc;
     private JSONToDistributedR1CS<BN254aFields.BN254aFr> converter;
+    private Configuration config;
+    private BN254aFrParameters FpParameters;
 
     @Before
     public void setUp() {
@@ -30,11 +33,10 @@ public class distributedFromJSONTest implements Serializable {
         int numMemory = 1;
         int numPartitions = 2;
 
-        Configuration config = new Configuration(
+        config = new Configuration(
                 numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
 
-        String jsonFilePath = "src/test/data/json/";
-        converter = new JSONToDistributedR1CS<>(jsonFilePath, config);
+        FpParameters = new BN254aFrParameters();
     }
 
     @After
@@ -45,12 +47,14 @@ public class distributedFromJSONTest implements Serializable {
 
     @Test
     public void distributedR1CSFromJSONTest() {
-        String fileName = "satisfiable_pepper.json";
-        R1CSRelationRDD<BN254aFields.BN254aFr> pepperR1CS = converter.loadR1CS(fileName);
+        String filePath = "src/test/data/json/satisfiable_pepper.json";
+        converter = new JSONToDistributedR1CS<>(filePath, config, FpParameters);
+
+        R1CSRelationRDD<BN254aFields.BN254aFr> pepperR1CS = converter.loadR1CS();
         assertTrue(pepperR1CS.isValid());
 
         Tuple2<Assignment<BN254aFields.BN254aFr>, JavaPairRDD<Long, BN254aFields.BN254aFr>>
-                pepperWitness = converter.loadWitness(fileName);
+                pepperWitness = converter.loadWitness();
         assertTrue(pepperR1CS.isSatisfied(pepperWitness._1(), pepperWitness._2()));
     }
 
