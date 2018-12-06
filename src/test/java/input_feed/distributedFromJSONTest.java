@@ -1,6 +1,6 @@
 package input_feed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import configuration.Configuration;
 import input_feed.distributed.JSONToDistributedR1CS;
@@ -21,9 +21,12 @@ import static org.junit.Assert.assertTrue;
 
 public class distributedFromJSONTest implements Serializable {
     private transient JavaSparkContext sc;
-    private JSONToDistributedR1CS<BN254aFields.BN254aFr> converter;
     private Configuration config;
     private BN254aFrParameters FpParameters;
+    private JSONToDistributedR1CS<BN254aFr> converter;
+    private R1CSRelationRDD<BN254aFr> r1cs;
+    private Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness;
+
 
     @Before
     public void setUp() {
@@ -50,12 +53,11 @@ public class distributedFromJSONTest implements Serializable {
         String filePath = "src/test/data/json/satisfiable_pepper.json";
         converter = new JSONToDistributedR1CS<>(filePath, config, FpParameters);
 
-        R1CSRelationRDD<BN254aFields.BN254aFr> pepperR1CS = converter.loadR1CS();
-        assertTrue(pepperR1CS.isValid());
+        r1cs = converter.loadR1CS();
+        assertTrue(r1cs.isValid());
 
-        Tuple2<Assignment<BN254aFields.BN254aFr>, JavaPairRDD<Long, BN254aFields.BN254aFr>>
-                pepperWitness = converter.loadWitness();
-        assertTrue(pepperR1CS.isSatisfied(pepperWitness._1(), pepperWitness._2()));
+        witness = converter.loadWitness();
+        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
 
