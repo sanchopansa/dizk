@@ -63,6 +63,10 @@ public class BN254bFields {
             return new BN254bFr(number);
         }
 
+        public BN254bFr construct(final String number) {
+            return new BN254bFr(number);
+        }
+
         public BN254bFr construct(final Fp element) {
             return new BN254bFr(element);
         }
