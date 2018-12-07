@@ -10,10 +10,10 @@ import scala.Tuple2;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS {
+public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS<FieldT> {
 
-    public TextToSerialR1CS(String _filePath, AbstractFpParameters _fieldParameters) {
-        super(_filePath, _fieldParameters);
+    public TextToSerialR1CS(String _filePath, FieldT _fieldFactory) {
+        super(_filePath, _fieldFactory);
     }
 
     @Override
@@ -76,8 +76,8 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             String nextLine;
             int count = 0;
             while ((nextLine = br.readLine()) != null) {
-                final Fp value = new Fp(nextLine, this.fieldParameters());
-                oneFullAssignment.add((FieldT) value);
+                final FieldT value = this.fieldParameters().construct(nextLine);
+                oneFullAssignment.add(value);
                 count++;
             }
 
@@ -93,9 +93,7 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private <FieldT extends AbstractFieldElementExpanded<FieldT>>
-    LinearCombination<FieldT>
-    makeRowAt (long index, BufferedReader reader) {
+    private LinearCombination<FieldT> makeRowAt (long index, BufferedReader reader) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         try {
@@ -111,8 +109,8 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
                 if (index == row) {
                     reader.mark(readAheadLimit);
-                    Fp value = new Fp(tokens[2], this.fieldParameters());
-                    L.add(new LinearTerm<>(col, (FieldT) value));
+                    final FieldT value = this.fieldParameters().construct(tokens[2]);
+                    L.add(new LinearTerm<>(col, value));
                 } else if (row > index) {
                     reader.reset();
                     return L;

@@ -2,6 +2,7 @@ package input_feed;
 
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
+import algebra.fields.Fp;
 import input_feed.serial.JSONToSerialR1CS;
 import org.junit.After;
 import org.junit.Before;
@@ -15,16 +16,17 @@ import java.io.Serializable;
 import static org.junit.Assert.assertTrue;
 
 public class serialFromJSONTest implements Serializable {
-    private JSONToSerialR1CS<BN254aFr> converter;
+    private JSONToSerialR1CS<Fp> converter;
     private BN254aFrParameters FpParameters;
-    private R1CSRelation<BN254aFr> r1cs;
-    private Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness;
+    private Fp fieldFactory;
+    private R1CSRelation<Fp> r1cs;
+    private Tuple2<Assignment<Fp>, Assignment<Fp>> witness;
 
     @Before
     public void setUp() {
 
         FpParameters = new BN254aFrParameters();
-
+        fieldFactory = new Fp(1, FpParameters);
     }
 
     @After
@@ -35,7 +37,7 @@ public class serialFromJSONTest implements Serializable {
     @Test
     public void tinyR1CSFromJSONTest() {
         String filePath = "src/test/data/json/libsnark_tutorial.json";
-        converter = new JSONToSerialR1CS<>(filePath, FpParameters);
+        converter = new JSONToSerialR1CS<>(filePath, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
@@ -47,7 +49,7 @@ public class serialFromJSONTest implements Serializable {
     @Test
     public void smallR1CSFromJSONTest() {
         String filePath = "src/test/data/json/satisfiable_pepper.json";
-        converter = new JSONToSerialR1CS<>(filePath, FpParameters);
+        converter = new JSONToSerialR1CS<>(filePath, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());

@@ -8,19 +8,19 @@ import scala.Tuple2;
 
 public abstract class abstractFileToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
     private final String filePath;
-    private final AbstractFpParameters fieldParameters;
+    private final FieldT fieldFactory;
 
     abstractFileToSerialR1CS(
-            final String _filePath, final AbstractFpParameters _fieldParameters) {
+            final String _filePath, final FieldT _fieldFactory) {
         filePath = _filePath;
-        fieldParameters = _fieldParameters;
+        fieldFactory = _fieldFactory;
     }
 
     String filePath() {
         return filePath;
     }
 
-    AbstractFpParameters fieldParameters() { return fieldParameters; }
+    FieldT fieldParameters() { return fieldFactory; }
 
     public abstract R1CSRelation<FieldT> loadR1CS();
 
