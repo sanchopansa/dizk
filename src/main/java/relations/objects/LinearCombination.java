@@ -11,6 +11,7 @@ import algebra.fields.AbstractFieldElementExpanded;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class LinearCombination<FieldT extends AbstractFieldElementExpanded<FieldT>> implements
         Serializable {
@@ -72,5 +73,10 @@ public class LinearCombination<FieldT extends AbstractFieldElementExpanded<Field
 
     public int size() {
         return terms.size();
+    }
+
+    @Override
+    public String toString() {
+        return Arrays.toString(this.terms.toArray()) + '\n';
     }
 }

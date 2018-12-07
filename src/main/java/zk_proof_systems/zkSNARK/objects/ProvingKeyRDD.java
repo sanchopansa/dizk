@@ -93,4 +93,11 @@ public class ProvingKeyRDD<FieldT extends AbstractFieldElementExpanded<FieldT>, 
     public R1CSRelationRDD<FieldT> r1cs() {
         return r1cs;
     }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "alphaG1 = %s\nbetaG1 = %s\nbetaG2 = %s\ndeltaG1 = %s\ndeltaG2 = %s\ndeltaABCG1 = %s\nqueryA = %s\nqueryB = %s\nqueryH = %s\n",
+                alphaG1, betaG1, betaG2, deltaG1, deltaG2, deltaABCG1, queryA, queryB, queryH);
+    }
 }
