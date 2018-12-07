@@ -44,7 +44,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         assert(numConstraints >= this.config().numPartitions());
 
         final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
-
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombination(
                 this.filePath() + ".a", partitions, numConstraints);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombination(
@@ -141,16 +140,21 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             final BufferedReader br = new BufferedReader(new FileReader(fileName));
             // TODO - this is not the best for performance
             Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br);
+            br.close();
 
             result = this.config().sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
-                final long partSize = part == numPartitions ? numConstraints %
-                        (numConstraints / numPartitions) : numConstraints / numPartitions;
+                final long partSize;
+                if (part == numPartitions && numConstraints < 2 * numPartitions) {
+                    partSize = numConstraints - numPartitions;
+                } else {
+                    partSize = part == numPartitions ? numConstraints %
+                            (numConstraints / numPartitions) : numConstraints / numPartitions;
+                }
 
                 final ArrayList<Tuple2<Long, LinearTerm<FieldT>>> T = new ArrayList<>();
                 for (long i = 0; i < partSize; i++) {
 
                     final long index = part * (numConstraints / numPartitions) + i;
-
                     if (constraintMap.containsKey((int) index)){
                         LinearCombination<FieldT> currRow = constraintMap.get((int) index);
                         for (LinearTerm term: currRow.terms()) {
@@ -160,7 +164,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                 }
                 return T.iterator();
             });
-            br.close();
+
             return result;
         } catch (Exception e) {
             System.err.println("Error: " + e.getMessage());
@@ -193,6 +197,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     index++;
                 }
             }
+            constraintMap.put(index, L);
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
