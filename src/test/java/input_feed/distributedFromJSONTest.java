@@ -60,6 +60,18 @@ public class distributedFromJSONTest implements Serializable {
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
+    @Test
+    public void distributedR1CSFromJSONTest2() {
+        String filePath = "src/test/data/json/libsnark_tutorial.json";
+        converter = new JSONToDistributedR1CS<>(filePath, config, FpParameters);
+
+        r1cs = converter.loadR1CS();
+        assertTrue(r1cs.isValid());
+
+        witness = converter.loadWitness();
+        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
+    }
+
 
 }
 
