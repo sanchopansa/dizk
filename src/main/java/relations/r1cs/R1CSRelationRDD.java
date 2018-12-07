@@ -129,7 +129,6 @@ public class R1CSRelationRDD<FieldT extends AbstractFieldElementExpanded<FieldT>
                 System.out.println("<c,(1,x)> = " + c);
                 return true;
             }
-
             return false;
         }).count();
 
