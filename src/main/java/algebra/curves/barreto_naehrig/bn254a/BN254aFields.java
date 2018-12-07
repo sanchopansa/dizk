@@ -66,6 +66,10 @@ public class BN254aFields {
             return new BN254aFr(element);
         }
 
+        public BN254aFr construct(final String value) {
+            return new BN254aFr(value);
+        }
+
         public String toString() {
             return this.element.toString();
         }
