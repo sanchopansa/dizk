@@ -19,12 +19,12 @@ import java.io.FileReader;
 import java.util.ArrayList;
 
 public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends abstractFileToDistributedR1CS {
+        extends abstractFileToDistributedR1CS<FieldT> {
 
     public JSONToDistributedR1CS(
             final String _filePath,
             final Configuration _config,
-            BN254aFrParameters _fpParameters
+            FieldT _fpParameters
     ) {
         super(_filePath, _config, _fpParameters);
     }
@@ -101,12 +101,12 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         // TODO - Serial assignment may not be necessary.
         final Assignment<FieldT> serialAssignment = new Assignment<>();
         for (Object input: primaryInputs) {
-            final Fp value = new Fp((String) input, this.fieldParameters());
-            serialAssignment.add((FieldT) value);
+            final FieldT value = this.fieldParameters().construct((String) input);
+            serialAssignment.add(value);
         }
         for (Object input: auxInputs) {
-            final Fp value = new Fp((String) input, this.fieldParameters());
-            serialAssignment.add((FieldT) value);
+            final FieldT value = this.fieldParameters().construct((String) input);
+            serialAssignment.add(value);
         }
 
         final long numVariables = primaryInputs.size() + auxInputs.size();
@@ -143,7 +143,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     ){
         final int numPartitions = this.config().numPartitions();
         assert(numConstraints >= numPartitions);
-        final AbstractFpParameters fieldParams = this.fieldParameters();
+        final FieldT fieldParams = this.fieldParameters();
 
         return this.config().sparkContext()
                 .parallelize(partitions, numPartitions).flatMapToPair(part -> {
@@ -159,12 +159,12 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                         for (Object keyObj: next.keySet()) {
                             String key = keyObj.toString();
                             long columnIndex = Long.parseLong(key);
-                            Fp value;
+                            FieldT value;
                             try{
-                                value = new Fp((String) next.get(key), fieldParams);
+                                value = fieldParams.construct((String) next.get(key));
                             } catch (ClassCastException e){
                                 // Handle case when key-value pairs are String: Long
-                                value = new Fp(Long.toString((long) next.get(key)), fieldParams);
+                                value = fieldParams.construct(Long.toString((long) next.get(key)));
                             }
                             T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
                         }

@@ -2,6 +2,7 @@ package input_feed;
 
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
+import algebra.fields.Fp;
 import configuration.Configuration;
 import input_feed.distributed.TextToDistributedR1CS;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -23,9 +24,10 @@ public class distributedFromTextTest implements Serializable {
     private transient JavaSparkContext sc;
     private Configuration config;
     private BN254aFrParameters FpParameters;
-    private TextToDistributedR1CS<BN254aFr> converter;
-    private R1CSRelationRDD<BN254aFr> r1cs;
-    private Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness;
+    private TextToDistributedR1CS<Fp> converter;
+    private R1CSRelationRDD<Fp> r1cs;
+    private Tuple2<Assignment<Fp>, JavaPairRDD<Long, Fp>> witness;
+    private Fp fieldFactory;
 
     @Before
     public void setUp() {
@@ -37,6 +39,7 @@ public class distributedFromTextTest implements Serializable {
 
         config = new Configuration(numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
         FpParameters = new BN254aFrParameters();
+        fieldFactory = new Fp(1, FpParameters);
     }
 
     @After
@@ -48,7 +51,7 @@ public class distributedFromTextTest implements Serializable {
     @Test
     public void distributedR1CSFromTextTest() {
         String fileName = "src/test/data/text/contrived/small";
-        converter = new TextToDistributedR1CS<>(fileName, config, FpParameters);
+        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
@@ -60,7 +63,7 @@ public class distributedFromTextTest implements Serializable {
     @Test
     public void distributedR1CSFromTextTest2() {
         String fileName = "src/test/data/text/overflow/overflow";
-        converter = new TextToDistributedR1CS<>(fileName, config, FpParameters);
+        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());

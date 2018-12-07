@@ -11,11 +11,12 @@ import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
 import java.io.FileReader;
+import java.lang.reflect.Field;
 
 public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends abstractFileToSerialR1CS {
+        extends abstractFileToSerialR1CS<FieldT> {
 
-    public JSONToSerialR1CS(String _filePath, AbstractFpParameters _fieldParameters) {
+    public JSONToSerialR1CS(String _filePath, FieldT _fieldParameters) {
         super(_filePath, _fieldParameters);
     }
 
@@ -79,33 +80,31 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
         final Assignment<FieldT> primary = new Assignment<>();
         for (Object element: primaryInputs) {
-            final Fp value = new Fp((String) element, this.fieldParameters());
-            primary.add((FieldT) value);
+            final FieldT value = this.fieldParameters().construct((String) element);
+            primary.add(value);
         }
 
         final Assignment<FieldT> auxiliary = new Assignment<>();
         for (Object element: auxInputs) {
-            final Fp value = new Fp((String) element, this.fieldParameters());
-            auxiliary.add((FieldT) value);
+            final FieldT value = this.fieldParameters().construct((String) element);
+            auxiliary.add(value);
         }
 
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private <FieldT extends AbstractFieldElementExpanded<FieldT>>
-    LinearCombination<FieldT>
-    serialCombinationFromJSON (final JSONObject matrixRow) {
+    private LinearCombination<FieldT> serialCombinationFromJSON (final JSONObject matrixRow) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         for (Object keyObj: matrixRow.keySet()) {
             String key = (String) keyObj;
-            Fp value;
+            FieldT value;
             try{
-                value = new Fp((String) matrixRow.get(key), this.fieldParameters());
+                value = this.fieldParameters().construct((String) matrixRow.get(key));
             } catch (ClassCastException e){
-                value = new Fp(Long.toString((long) matrixRow.get(key)), this.fieldParameters());
+                value = this.fieldParameters().construct(Long.toString((long) matrixRow.get(key)));
             }
-            L.add(new LinearTerm<>(Long.parseLong(key), (FieldT) value));
+            L.add(new LinearTerm<>(Long.parseLong(key), value));
         }
         return L;
     }

@@ -19,12 +19,12 @@ import java.util.Map;
 import java.util.HashMap;
 
 public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-    extends abstractFileToDistributedR1CS {
+    extends abstractFileToDistributedR1CS<FieldT> {
 
     public TextToDistributedR1CS(
             final String _filePath,
             final Configuration _config,
-            AbstractFpParameters _fieldParameters) {
+            FieldT _fieldParameters) {
         super(_filePath, _config, _fieldParameters);
     }
 
@@ -84,8 +84,8 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             String nextLine;
             int count = 0;
             while ((nextLine = br.readLine()) != null) {
-                final Fp value = new Fp(nextLine, this.fieldParameters());
-                serialAssignment.add((FieldT) value);
+                final FieldT value = this.fieldParameters().construct(nextLine);
+                serialAssignment.add(value);
                 count++;
             }
             assert (count == numInputs + numAuxiliary);
@@ -172,8 +172,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return null;
     }
 
-    public <FieldT extends AbstractFieldElementExpanded<FieldT>> Map<Integer, LinearCombination<FieldT>>
-    serializeReader(BufferedReader br) {
+    public Map<Integer, LinearCombination<FieldT>> serializeReader(BufferedReader br) {
         int index = 0;
         Map<Integer, LinearCombination<FieldT>> constraintMap = new HashMap<>();
         LinearCombination<FieldT> L = new LinearCombination<>();
@@ -187,7 +186,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                 assert (row >= index);
 
                 if (row == index) {
-                    Fp value = new Fp(tokens[2], this.fieldParameters());
+                    FieldT value = this.fieldParameters().construct(tokens[2]);
                     L.add(new LinearTerm<>(col, (FieldT) value));
                     br.mark(100);
                 } else {

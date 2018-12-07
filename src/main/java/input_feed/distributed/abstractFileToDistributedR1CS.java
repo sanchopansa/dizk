@@ -14,9 +14,9 @@ public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractField
 
     private final String filePath;
     private final Configuration config;
-    private final AbstractFpParameters fieldParameters;
+    private final FieldT fieldParameters;
 
-    abstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final AbstractFpParameters _fieldParameters) {
+    abstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final FieldT _fieldParameters) {
         filePath = _filePath;
         config = _config;
         fieldParameters = _fieldParameters;
@@ -30,7 +30,7 @@ public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractField
         return config;
     }
 
-    AbstractFpParameters fieldParameters() { return fieldParameters; }
+    FieldT fieldParameters() { return fieldParameters; }
 
     public abstract R1CSRelationRDD<FieldT> loadR1CS();
 

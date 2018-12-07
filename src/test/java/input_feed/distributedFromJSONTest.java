@@ -1,7 +1,7 @@
 package input_feed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
+import algebra.fields.Fp;
 import configuration.Configuration;
 import input_feed.distributed.JSONToDistributedR1CS;
 import org.apache.spark.api.java.JavaPairRDD;
@@ -23,9 +23,10 @@ public class distributedFromJSONTest implements Serializable {
     private transient JavaSparkContext sc;
     private Configuration config;
     private BN254aFrParameters FpParameters;
-    private JSONToDistributedR1CS<BN254aFr> converter;
-    private R1CSRelationRDD<BN254aFr> r1cs;
-    private Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness;
+    private JSONToDistributedR1CS<Fp> converter;
+    private R1CSRelationRDD<Fp> r1cs;
+    private Tuple2<Assignment<Fp>, JavaPairRDD<Long, Fp>> witness;
+    private Fp fieldFactory;
 
 
     @Before
@@ -40,6 +41,7 @@ public class distributedFromJSONTest implements Serializable {
                 numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
 
         FpParameters = new BN254aFrParameters();
+        fieldFactory = new Fp(1, FpParameters);
     }
 
     @After
@@ -51,7 +53,7 @@ public class distributedFromJSONTest implements Serializable {
     @Test
     public void distributedR1CSFromJSONTest() {
         String filePath = "src/test/data/json/satisfiable_pepper.json";
-        converter = new JSONToDistributedR1CS<>(filePath, config, FpParameters);
+        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
@@ -63,7 +65,7 @@ public class distributedFromJSONTest implements Serializable {
     @Test
     public void distributedR1CSFromJSONTest2() {
         String filePath = "src/test/data/json/libsnark_tutorial.json";
-        converter = new JSONToDistributedR1CS<>(filePath, config, FpParameters);
+        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
