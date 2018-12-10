@@ -122,6 +122,17 @@ This library comes with unit tests for each of the provided modules. Run the tes
 mvn test
 ``` 
 
+### Build and Run Docker Container
+
+```
+cd your_dizk_project_directory
+
+docker build -t dizk-container .
+docker run --rm -it dizk-container bash
+```
+
+This will put you inside a bash shell with a preinstalled and compiled project environment.
+
 ## Profiler
 
 Using Amazon EC2, the profiler benchmarks the performance of serial and distributed zero-knowledge proof systems, as well as its underlying primitives.
