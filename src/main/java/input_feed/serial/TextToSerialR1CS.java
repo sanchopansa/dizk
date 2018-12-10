@@ -71,16 +71,17 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             BufferedReader br = new BufferedReader(
                     new FileReader(this.filePath() + ".witness"));
 
+
             final Assignment<FieldT> oneFullAssignment = new Assignment<>();
 
-            String nextLine;
+            String[] splitWitness = br.readLine().split("\\s+");
+
             int count = 0;
-            while ((nextLine = br.readLine()) != null) {
-                final FieldT value = this.fieldParameters().construct(nextLine);
+            for (String next: splitWitness) {
+                final FieldT value = this.fieldParameters().construct(next);
                 oneFullAssignment.add(value);
                 count++;
             }
-
             assert (count == numInputs + numAuxiliary);
 
             primary = new Assignment<>(oneFullAssignment.subList(0, numInputs));
