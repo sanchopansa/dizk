@@ -81,13 +81,14 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             BufferedReader br = new BufferedReader(
                     new FileReader(this.filePath() + ".witness"));
 
-            String nextLine;
+            String[] splitWitness = br.readLine().split("\\s+");
             int count = 0;
-            while ((nextLine = br.readLine()) != null) {
-                final FieldT value = this.fieldParameters().construct(nextLine);
+            for (String next: splitWitness) {
+                final FieldT value = this.fieldParameters().construct(next);
                 serialAssignment.add(value);
                 count++;
             }
+
             assert (count == numInputs + numAuxiliary);
             br.close();
         } catch (Exception e){
@@ -187,7 +188,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
                 if (row == index) {
                     FieldT value = this.fieldParameters().construct(tokens[2]);
-                    L.add(new LinearTerm<>(col, (FieldT) value));
+                    L.add(new LinearTerm<>(col, value));
                     br.mark(100);
                 } else {
                     constraintMap.put(index, L);
