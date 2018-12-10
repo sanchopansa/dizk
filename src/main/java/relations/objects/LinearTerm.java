@@ -26,4 +26,9 @@ public class LinearTerm<FieldT> implements Serializable {
     public FieldT value() {
         return value;
     }
+
+    @Override
+    public String toString() {
+        return "c_" + index + ": " + value;
+    }
 }

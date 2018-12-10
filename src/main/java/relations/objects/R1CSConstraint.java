@@ -10,6 +10,8 @@ package relations.objects;
 import algebra.fields.AbstractFieldElementExpanded;
 
 import java.io.Serializable;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * A R1CSRelation constraint is a formal expression of the form
@@ -61,4 +63,13 @@ public class R1CSConstraint<FieldT extends AbstractFieldElementExpanded<FieldT>>
         return C;
     }
 
+    @Override
+    public String toString() {
+        List<String> list = Arrays.asList(
+                "A: " + this.A,
+                "B: " + this.B,
+                "C: " + this.C
+        );
+        return String.join(",", list) + "\n";
+    }
 }

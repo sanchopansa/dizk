@@ -21,6 +21,13 @@ public class VerificationKey<G1T extends AbstractG1<G1T>, G2T extends AbstractG2
     private final G2T deltaG2;
     private final List<G1T> gammaABC;
 
+    @Override
+    public String toString() {
+        return String.format(
+                "Verification Key:\nalphaG1betaG2 = %s\ngammaG2 = %s\ndeltaG2 = %s\ngammaABC = %s\n",
+                alphaG1betaG2, gammaG2, deltaG2.bitSize(), gammaABC.size());
+    }
+
     public VerificationKey(
             final GTT _alphaG1betaG2,
             final G2T _gammaG2,

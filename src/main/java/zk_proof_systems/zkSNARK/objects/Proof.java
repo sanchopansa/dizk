@@ -16,6 +16,11 @@ public class Proof<G1T extends AbstractG1<G1T>, G2T extends AbstractG2<G2T>> {
     private final G2T gB;
     private final G1T gC;
 
+    @Override
+    public String toString() {
+        return String.format("Proof:\ngA = [%s]\ngB = [%s]\ngC = [%s]\n", gA, gB, gC);
+    }
+
     public Proof(final G1T _gA, final G2T _gB, final G1T _gC) {
         gA = _gA;
         gB = _gB;
