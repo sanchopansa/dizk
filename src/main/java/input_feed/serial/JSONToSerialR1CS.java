@@ -16,8 +16,17 @@ import java.lang.reflect.Field;
 public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
         extends abstractFileToSerialR1CS<FieldT> {
 
-    public JSONToSerialR1CS(String _filePath, FieldT _fieldParameters) {
+    public JSONToSerialR1CS(
+            final String _filePath,
+            final FieldT _fieldParameters) {
         super(_filePath, _fieldParameters);
+    }
+
+    public JSONToSerialR1CS(
+            final String _filePath,
+            final FieldT _fieldParameters,
+            final boolean _negate) {
+        super(_filePath, _fieldParameters, _negate);
     }
 
     @Override
@@ -49,11 +58,11 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
         for (int i = 0; i < constraintArray.length; i++) {
             final LinearCombination<FieldT> A = serialCombinationFromJSON(
-                    (JSONObject) constraintArray[i].get(0));
+                    (JSONObject) constraintArray[i].get(0), false);
             final LinearCombination<FieldT> B = serialCombinationFromJSON(
-                    (JSONObject) constraintArray[i].get(1));
+                    (JSONObject) constraintArray[i].get(1), false);
             final LinearCombination<FieldT> C = serialCombinationFromJSON(
-                    (JSONObject) constraintArray[i].get(2));
+                    (JSONObject) constraintArray[i].get(2), this.negate());
 
             constraints.add(new R1CSConstraint<>(A, B, C));
         }
@@ -93,7 +102,7 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private LinearCombination<FieldT> serialCombinationFromJSON (final JSONObject matrixRow) {
+    private LinearCombination<FieldT> serialCombinationFromJSON (final JSONObject matrixRow, final boolean negate) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         for (Object keyObj: matrixRow.keySet()) {
@@ -103,6 +112,9 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
                 value = this.fieldParameters().construct((String) matrixRow.get(key));
             } catch (ClassCastException e){
                 value = this.fieldParameters().construct(Long.toString((long) matrixRow.get(key)));
+            }
+            if (negate) {
+                value = value.negate();
             }
             L.add(new LinearTerm<>(Long.parseLong(key), value));
         }

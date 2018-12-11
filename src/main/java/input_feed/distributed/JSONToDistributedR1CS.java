@@ -24,9 +24,19 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     public JSONToDistributedR1CS(
             final String _filePath,
             final Configuration _config,
-            FieldT _fpParameters
+            final FieldT _fpParameters
     ) {
         super(_filePath, _config, _fpParameters);
+    }
+
+    public JSONToDistributedR1CS(
+            final String _filePath,
+            final Configuration _config,
+            final FieldT _fpParameters,
+            final boolean _negate
+
+    ) {
+        super(_filePath, _config, _fpParameters, _negate);
     }
 
     @Override
@@ -62,13 +72,13 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         // Load Linear Combinations as RDD format
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationA = distributedCombinationFromJSON(
-                partitions, constraintArray, 0, numConstraints);
+                partitions, constraintArray, 0, numConstraints, false);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationB = distributedCombinationFromJSON(
-                partitions, constraintArray, 1, numConstraints);
+                partitions, constraintArray, 1, numConstraints, false);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationC = distributedCombinationFromJSON(
-                partitions, constraintArray, 2, numConstraints);
+                partitions, constraintArray, 2, numConstraints, this.negate());
 
         combinationA.count();
         combinationB.count();
@@ -139,7 +149,8 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             ArrayList<Integer> partitions,
             JSONArray[] constraintArray,
             int constraintArrayIndex,
-            int numConstraints
+            int numConstraints,
+            boolean negate
     ){
         final int numPartitions = this.config().numPartitions();
         assert(numConstraints >= numPartitions);
@@ -166,7 +177,10 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                                 // Handle case when key-value pairs are String: Long
                                 value = fieldParams.construct(Long.toString((long) next.get(key)));
                             }
-                            T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, (FieldT) value)));
+                            if (negate) {
+                                value = value.negate();
+                            }
+                            T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, value)));
                         }
                     }
                     return T.iterator();

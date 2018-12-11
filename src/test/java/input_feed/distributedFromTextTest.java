@@ -1,6 +1,5 @@
 package input_feed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.Fp;
 import configuration.Configuration;
@@ -64,6 +63,18 @@ public class distributedFromTextTest implements Serializable {
     public void distributedR1CSFromTextTest2() {
         String fileName = "src/test/data/text/overflow/overflow";
         converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
+
+        r1cs = converter.loadR1CS();
+        assertTrue(r1cs.isValid());
+
+        witness = converter.loadWitness();
+        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
+    }
+
+    @Test
+    public void distributedR1CSFromTextTest3() {
+        String fileName = "src/test/data/text/pep/transform";
+        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory, true);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());

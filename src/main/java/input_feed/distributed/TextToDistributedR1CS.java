@@ -24,9 +24,19 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     public TextToDistributedR1CS(
             final String _filePath,
             final Configuration _config,
-            FieldT _fieldParameters) {
+            final FieldT _fieldParameters) {
         super(_filePath, _config, _fieldParameters);
     }
+
+    public TextToDistributedR1CS(
+            final String _filePath,
+            final Configuration _config,
+            final FieldT _fieldParameters,
+            final boolean _negate) {
+        super(_filePath, _config, _fieldParameters, _negate);
+    }
+
+
 
     public R1CSRelationRDD<FieldT> loadR1CS() {
         String[] constraintParameters = new String[3];
@@ -45,11 +55,11 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombination(
-                this.filePath() + ".a", partitions, numConstraints);
+                this.filePath() + ".a", partitions, numConstraints, false);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombination(
-                this.filePath() + ".b", partitions, numConstraints);
+                this.filePath() + ".b", partitions, numConstraints, false);
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = distributedCombination(
-                this.filePath() + ".c", partitions, numConstraints);
+                this.filePath() + ".c", partitions, numConstraints, this.negate());
 
         linearCombinationA.count();
         linearCombinationB.count();
@@ -128,7 +138,8 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     distributedCombination(
             String fileName,
             ArrayList<Integer> partitions,
-            int numConstraints
+            int numConstraints,
+            boolean negate
     ){
         final int numPartitions = this.config().numPartitions();
 
@@ -140,7 +151,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
             final BufferedReader br = new BufferedReader(new FileReader(fileName));
             // TODO - this is not the best for performance
-            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br);
+            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br, negate);
             br.close();
 
             result = this.config().sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
@@ -173,7 +184,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return null;
     }
 
-    public Map<Integer, LinearCombination<FieldT>> serializeReader(BufferedReader br) {
+    public Map<Integer, LinearCombination<FieldT>> serializeReader(BufferedReader br, boolean negate) {
         int index = 0;
         Map<Integer, LinearCombination<FieldT>> constraintMap = new HashMap<>();
         LinearCombination<FieldT> L = new LinearCombination<>();
@@ -188,6 +199,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
                 if (row == index) {
                     FieldT value = this.fieldParameters().construct(tokens[2]);
+                    if (negate) {
+                        value = value.negate();
+                    }
                     L.add(new LinearTerm<>(col, value));
                     br.mark(100);
                 } else {

@@ -12,8 +12,17 @@ import java.io.FileReader;
 
 public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS<FieldT> {
 
-    public TextToSerialR1CS(String _filePath, FieldT _fieldFactory) {
+    public TextToSerialR1CS(
+            final String _filePath,
+            final FieldT _fieldFactory) {
         super(_filePath, _fieldFactory);
+    }
+
+    public TextToSerialR1CS(
+            final String _filePath,
+            final FieldT _fieldFactory,
+            final boolean _negate) {
+        super(_filePath, _fieldFactory, _negate);
     }
 
     @Override
@@ -37,9 +46,9 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             BufferedReader brC = new BufferedReader(new FileReader(this.filePath() + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
-                LinearCombination<FieldT> A = makeRowAt(currRow, brA);
-                LinearCombination<FieldT> B = makeRowAt(currRow, brB);
-                LinearCombination<FieldT> C = makeRowAt(currRow, brC);
+                LinearCombination<FieldT> A = makeRowAt(currRow, brA, false);
+                LinearCombination<FieldT> B = makeRowAt(currRow, brB, false);
+                LinearCombination<FieldT> C = makeRowAt(currRow, brC, this.negate());
 
                 constraints.add(new R1CSConstraint<>(A, B, C));
             }
@@ -94,7 +103,7 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new Tuple2<>(primary, auxiliary);
     }
 
-    private LinearCombination<FieldT> makeRowAt (long index, BufferedReader reader) {
+    private LinearCombination<FieldT> makeRowAt (long index, BufferedReader reader, boolean negate) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
 
         try {
@@ -110,7 +119,10 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
                 if (index == row) {
                     reader.mark(readAheadLimit);
-                    final FieldT value = this.fieldParameters().construct(tokens[2]);
+                    FieldT value = this.fieldParameters().construct(tokens[2]);
+                    if (negate) {
+                        value = value.negate();
+                    }
                     L.add(new LinearTerm<>(col, value));
                 } else if (row > index) {
                     reader.reset();
