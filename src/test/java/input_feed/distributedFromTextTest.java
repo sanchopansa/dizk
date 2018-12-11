@@ -71,16 +71,4 @@ public class distributedFromTextTest implements Serializable {
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
-    @Test
-    public void distributedR1CSFromTextTest3() {
-        String fileName = "src/test/data/text/pep/transform";
-        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory, true);
-
-        r1cs = converter.loadR1CS();
-        assertTrue(r1cs.isValid());
-
-        witness = converter.loadWitness();
-        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
-    }
-
 }
