@@ -15,11 +15,23 @@ public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractField
     private final String filePath;
     private final Configuration config;
     private final FieldT fieldParameters;
+    private boolean negate;
 
     abstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final FieldT _fieldParameters) {
         filePath = _filePath;
         config = _config;
         fieldParameters = _fieldParameters;
+    }
+
+    abstractFileToDistributedR1CS(
+            final String _filePath,
+            final Configuration _config,
+            final FieldT _fieldParameters,
+            final boolean _negate) {
+        filePath = _filePath;
+        config = _config;
+        fieldParameters = _fieldParameters;
+        negate = _negate;
     }
 
     String filePath() {
@@ -31,6 +43,8 @@ public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractField
     }
 
     FieldT fieldParameters() { return fieldParameters; }
+
+    boolean negate() { return negate; }
 
     public abstract R1CSRelationRDD<FieldT> loadR1CS();
 
