@@ -115,7 +115,6 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
                 int col = Integer.parseInt(tokens[0]);
                 int row = Integer.parseInt(tokens[1]);
-                assert (row >= index);
 
                 if (index == row) {
                     reader.mark(readAheadLimit);
@@ -124,6 +123,9 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
                         value = value.negate();
                     }
                     L.add(new LinearTerm<>(col, value));
+                } else if (row < index) {
+                    System.out.format(
+                            "[WARNING] found term with index %d after index %d. This term will be ignored.\n", row, index);
                 } else if (row > index) {
                     reader.reset();
                     return L;

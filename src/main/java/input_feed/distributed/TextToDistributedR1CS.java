@@ -195,7 +195,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                 String[] tokens = nextLine.split(" ");
                 int col = Integer.parseInt(tokens[0]);
                 int row = Integer.parseInt(tokens[1]);
-                assert (row >= index);
 
                 if (row == index) {
                     FieldT value = this.fieldParameters().construct(tokens[2]);
@@ -204,6 +203,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     }
                     L.add(new LinearTerm<>(col, value));
                     br.mark(100);
+                } else if (row < index) {
+                    System.out.format(
+                            "[WARNING] found term with index %d after index %d. This term will be ignored.\n", row, index);
                 } else {
                     constraintMap.put(index, L);
                     L = new LinearCombination<>();
