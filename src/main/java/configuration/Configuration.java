@@ -45,6 +45,9 @@ public class Configuration implements Serializable {
     private StorageLevel storageLevel;
     private JavaSparkContext sc;
 
+    /* Input File Path*/
+    private String filePath;
+
     /* Debug Flag runs assertion checks for debugging */
     private boolean debugFlag;
 
@@ -71,6 +74,8 @@ public class Configuration implements Serializable {
         storageLevel = StorageLevel.MEMORY_AND_DISK_SER();
 
         debugFlag = false;
+
+        filePath = "";
     }
 
     public Configuration(
@@ -87,6 +92,25 @@ public class Configuration implements Serializable {
         this.numPartitions = numPartitions;
         this.sc = sc;
         this.storageLevel = storageLevel;
+        sc.setLogLevel("ERROR");
+    }
+
+    public Configuration(
+            final int numExecutors,
+            final int numCores,
+            final int numMemory,
+            final int numPartitions,
+            final JavaSparkContext sc,
+            final StorageLevel storageLevel,
+            final String filePath) {
+        this();
+        this.numExecutors = numExecutors;
+        this.numCores = numCores;
+        this.numMemory = numMemory;
+        this.numPartitions = numPartitions;
+        this.sc = sc;
+        this.storageLevel = storageLevel;
+        this.filePath = filePath;
         sc.setLogLevel("ERROR");
     }
 
@@ -391,6 +415,8 @@ public class Configuration implements Serializable {
     public JavaSparkContext sparkContext() {
         return sc;
     }
+
+    public String filePath() { return filePath; }
 
     private void printIndentation() {
         for (int i = 0; i < indentation; i++) {

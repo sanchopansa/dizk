@@ -30,7 +30,7 @@ public class InputFeedProfiling {
 //    private CRS<BN254aFr, BN254aG1, BN254aG2, BN254aGT> CRS;
 //    private Proof<BN254aG1, BN254aG2> proof;
 
-    public void distributedSetupProfiler(final Configuration config) {
+    public static void distributedSetupProfiler(final Configuration config, String filePath) {
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
@@ -39,10 +39,8 @@ public class InputFeedProfiling {
 //        FpParameters = new BN254aFrParameters();
 //        fieldFactory = new Fp(1, FpParameters);
 
-        String filePath = "/input";
-
         TextToDistributedR1CS<BN254aFr>
-                converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory);
+                converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
 
         R1CSRelationRDD<BN254aFr> r1cs = converter.loadR1CS();
 
