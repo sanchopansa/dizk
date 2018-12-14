@@ -17,11 +17,11 @@ for TOTAL_CORES in 8; do
     export NUM_PARTITIONS=$((TOTAL_CORES * MULTIPLIER))
 
     /root/spark/bin/spark-submit \
-      --conf spark.driver.memory=$MEMORY \
-      --conf spark.driver.maxResultSize=$MEMORY \
-      --conf spark.executor.cores=$CORES \
-      --total-executor-cores $TOTAL_CORES \
-      --conf spark.executor.memory=$MEMORY \
+      --conf spark.driver.memory=${MEMORY} \
+      --conf spark.driver.maxResultSize=${MEMORY} \
+      --conf spark.executor.cores=${CORES} \
+      --total-executor-cores ${TOTAL_CORES} \
+      --conf spark.executor.memory=${MEMORY} \
       --conf spark.memory.fraction=0.95 \
       --conf spark.memory.storageFraction=0.3 \
       --conf spark.kryoserializer.buffer.max=1g \
@@ -37,7 +37,7 @@ for TOTAL_CORES in 8; do
       --conf spark.eventLog.dir=/tmp/spark-events \
       --conf spark.eventLog.enabled=false \
       --class "profiler.Profiler" \
-      /home/ec2-user/dizk-1.0.jar $NUM_EXECUTORS $CORES $MEMORY $APP $SIZE $NUM_PARTITIONS
+      /home/ec2-user/dizk-1.0.jar ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${APP} ${SIZE} ${NUM_PARTITIONS}
   done
 done
 
