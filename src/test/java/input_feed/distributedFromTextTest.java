@@ -10,6 +10,7 @@ import org.apache.spark.storage.StorageLevel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import profiler.profiling.InputFeedProfiling;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
@@ -31,10 +32,10 @@ public class distributedFromTextTest implements Serializable {
     @Before
     public void setUp() {
         sc = new JavaSparkContext("local", "ZKSparkTestSuite");
-        int numExecutors = 1;
-        int numCores = 1;
-        int numMemory = 1;
-        int numPartitions = 2;
+        int numExecutors = 2;
+        int numCores = 2;
+        int numMemory = 4;
+        int numPartitions = 16;
 
         config = new Configuration(numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
         FpParameters = new BN254aFrParameters();
@@ -69,6 +70,26 @@ public class distributedFromTextTest implements Serializable {
 
         witness = converter.loadWitness();
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
+    }
+
+    @Test
+    public void mediumDistributedR1CSFromText() {
+        String fileName = "src/test/data/text/pephash/hash_transform";
+        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory, true);
+
+        r1cs = converter.loadR1CS();
+        assertTrue(r1cs.isValid());
+
+        witness = converter.loadWitness();
+        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
+    }
+
+    @Test
+    public void distributedProfiling() {
+        String fileName = "src/test/data/text/pephash/hash_transform";
+        InputFeedProfiling.distributedConstraintMatrixProfiler(config, fileName);
+
+
     }
 
 }
