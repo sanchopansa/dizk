@@ -21,6 +21,8 @@ import zk_proof_systems.zkSNARK.Verifier;
 import zk_proof_systems.zkSNARK.objects.CRS;
 import zk_proof_systems.zkSNARK.objects.Proof;
 
+import java.util.ArrayList;
+
 public class InputFeedProfiling {
 //    private TextToDistributedR1CS<BN254aFr> converter;
 //    private BN254aFrParameters FpParameters;
@@ -30,7 +32,41 @@ public class InputFeedProfiling {
 //    private CRS<BN254aFr, BN254aG1, BN254aG2, BN254aGT> CRS;
 //    private Proof<BN254aG1, BN254aG2> proof;
 
-    public static void distributedSetupProfiler(final Configuration config, String filePath) {
+    public static void distributedWitnessProfiler(final Configuration config, String filePath) {
+
+        final BN254aFr fieldFactory = new BN254aFr(2L);
+
+        TextToDistributedR1CS<BN254aFr>
+                converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
+
+        config.setContext("Load Witness");
+
+        config.beginLog(config.context());
+        config.beginRuntime("Load Witness");
+        converter.loadWitness();
+        config.endLog(config.context());
+        config.endRuntime("Load Witness");
+
+    }
+
+    public static void distributedConstraintMatrixProfiler(final Configuration config, String filePath) {
+
+        final BN254aFr fieldFactory = new BN254aFr(2L);
+
+        TextToDistributedR1CS<BN254aFr>
+                converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
+
+        config.setContext("Load Constraint Matrix");
+
+        config.beginLog(config.context());
+        config.beginRuntime("Load Constraint Matrix");
+        converter.loadConstraintMatrix("a");
+        config.endLog(config.context());
+        config.endRuntime("Load Constraint Matrix");
+
+    }
+
+    public static void distributedZKSnarkProfiler(final Configuration config, String filePath) {
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
@@ -42,10 +78,31 @@ public class InputFeedProfiling {
         TextToDistributedR1CS<BN254aFr>
                 converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
 
-        R1CSRelationRDD<BN254aFr> r1cs = converter.loadR1CS();
+        config.setContext("Load R1CS");
 
-        Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>>
-                witness = converter.loadWitness();
+        config.beginLog(config.context());
+        config.beginRuntime("Load R1CS");
+        R1CSRelationRDD<BN254aFr> r1cs = converter.loadR1CS();
+        config.endLog(config.context());
+        config.endRuntime("Load R1CS");
+
+        config.writeRuntimeLog(config.context());
+
+        config.setContext("Load Witness");
+
+        config.beginLog(config.context());
+        config.beginRuntime("Load Witness");
+        Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness = converter.loadWitness();
+        config.endLog(config.context());
+        config.endRuntime("Load Witness");
+
+        config.writeRuntimeLog(config.context());
+
+        config.setContext("Check Satisfied");
+
+        config.beginLog(config.context());
+        System.out.println(r1cs.isSatisfied(witness._1(),witness._2()));
+        config.endLog(config.context());
 
         Assignment primary = witness._1();
         JavaPairRDD fullAssignment = witness._2();

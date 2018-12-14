@@ -71,7 +71,7 @@ public class Profiler {
         } else if (app.equals("vmsm-sorted-g1")) {
             VariableBaseMSMProfiling.distributedSortedVariableBaseMSMG1Profiling(config, size);
         } else if (app.equals("input-feed")) {
-            InputFeedProfiling.distributedSetupProfiler(config, config.filePath());
+            InputFeedProfiling.distributedZKSnarkProfiler(config, config.filePath());
         }
 
         System.out.format(
