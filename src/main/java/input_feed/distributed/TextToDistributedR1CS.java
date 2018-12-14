@@ -36,7 +36,19 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         super(_filePath, _config, _fieldParameters, _negate);
     }
 
-
+    public JavaPairRDD<Long, LinearTerm<FieldT>> loadConstraintMatrix(String matrix) {
+        String[] constraintParameters = new String[3];
+        try{
+            constraintParameters = new BufferedReader(
+                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
+        } catch (Exception e){
+            System.err.println("Error: " + e.getMessage());
+        }
+        int numConstraints = Integer.parseInt(constraintParameters[2]);
+        final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
+        return distributedCombination(
+                this.filePath() + "." + matrix, partitions, numConstraints, false);
+    }
 
     public R1CSRelationRDD<FieldT> loadR1CS() {
         String[] constraintParameters = new String[3];
@@ -54,16 +66,28 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         assert(numConstraints >= this.config().numPartitions());
 
         final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
+
+        this.config().beginLog("Constraint matrix A");
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = distributedCombination(
                 this.filePath() + ".a", partitions, numConstraints, false);
+        this.config().endLog("Constraint matrix A");
+        this.config().beginLog("Constraint matrix B");
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = distributedCombination(
                 this.filePath() + ".b", partitions, numConstraints, false);
+        this.config().endLog("Constraint matrix B");
+
+        this.config().beginLog("Constraint matrix C");
         JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = distributedCombination(
                 this.filePath() + ".c", partitions, numConstraints, this.negate());
+        this.config().endLog("Constraint matrix C");
 
+        this.config().beginLog("Count combinations");
         linearCombinationA.count();
+        System.out.println("Counted combination A");
         linearCombinationB.count();
+        System.out.println("Counted combination B");
         linearCombinationC.count();
+        this.config().endLog("Count combinations");
 
         final R1CSConstraintsRDD<FieldT> constraints = new R1CSConstraintsRDD<>(
                 linearCombinationA,
@@ -88,25 +112,38 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             numInputs = Integer.parseInt(constraintParameters[0]);
             numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
-            BufferedReader br = new BufferedReader(
-                    new FileReader(this.filePath() + ".witness"));
+            BufferedReader brP = new BufferedReader(
+                    new FileReader(this.filePath() + ".primary"));
 
-            String[] splitWitness = br.readLine().split("\\s+");
+            BufferedReader brA = new BufferedReader(
+                    new FileReader(this.filePath() + ".aux"));
+
+            this.config().beginRuntime("Serialize and Distribute Witness");
+            this.config().beginLog("Witness serialization");
+            String[] splitPrimary = brP.readLine().split("\\s+");
             int count = 0;
-            for (String next: splitWitness) {
+            String[] splitAux = brA.readLine().split("\\s+");
+            for (String next: splitAux) {
                 final FieldT value = this.fieldParameters().construct(next);
                 serialAssignment.add(value);
                 count++;
             }
+            brA.close();
+            for (String next: splitPrimary) {
+                final FieldT value = this.fieldParameters().construct(next);
+                serialAssignment.add(value);
+                count++;
+            }
+            brP.close();
+            this.config().endLog("Witness serialization");
 
             assert (count == numInputs + numAuxiliary);
-            br.close();
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
 
         int totalSize = numInputs + numAuxiliary;
-
+        this.config().beginLog("Partition construction");
         final int numExecutors = this.config().numExecutors();
         final ArrayList<Integer> assignmentPartitions = new ArrayList<>();
         for (int i = 0; i < numExecutors; i++) {
@@ -115,7 +152,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         if (totalSize % 2 != 0) {
             assignmentPartitions.add(numExecutors);
         }
+        this.config().endLog("Partition construction");
 
+        this.config().beginLog("Distribute witness");
         JavaPairRDD<Long, FieldT> distributedAssignment = this.config().sparkContext()
                 .parallelize(assignmentPartitions, numExecutors).flatMapToPair(part -> {
                     final long startIndex = part * (totalSize / numExecutors);
@@ -128,19 +167,18 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     }
                     return assignment.iterator();
                 }).persist(this.config().storageLevel());
+        this.config().endLog("Distribute witness");
 
         final Assignment<FieldT> primary = new Assignment<>(serialAssignment.subList(0, numInputs));
+//        final Assignment<FieldT> primary = new Assignment<>(serialAssignment.subList(numAuxiliary, serialAssignment.size()));
+
+        this.config().endRuntime("Serialize and Distribute Witness");
 
         return new Tuple2<>(primary, distributedAssignment);
     }
 
     private JavaPairRDD<Long, LinearTerm<FieldT>>
-    distributedCombination(
-            String fileName,
-            ArrayList<Integer> partitions,
-            int numConstraints,
-            boolean negate
-    ){
+    distributedCombination(String fileName, ArrayList<Integer> partitions, int numConstraints, boolean negate){
         final int numPartitions = this.config().numPartitions();
 
         // Require at least one constraint per partition!
@@ -151,7 +189,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
             final BufferedReader br = new BufferedReader(new FileReader(fileName));
             // TODO - this is not the best for performance
-            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br, negate);
+            Map<Integer, LinearCombination<FieldT>> constraintMap = serializeReader(br, numConstraints, negate);
             br.close();
 
             result = this.config().sparkContext().parallelize(partitions, numPartitions).flatMapToPair(part -> {
@@ -184,7 +222,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return null;
     }
 
-    public Map<Integer, LinearCombination<FieldT>> serializeReader(BufferedReader br, boolean negate) {
+    public Map<Integer, LinearCombination<FieldT>> serializeReader(BufferedReader br, int numC, boolean negate) {
         int index = 0;
         Map<Integer, LinearCombination<FieldT>> constraintMap = new HashMap<>();
         LinearCombination<FieldT> L = new LinearCombination<>();
@@ -202,6 +240,12 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                         value = value.negate();
                     }
                     L.add(new LinearTerm<>(col, value));
+                    if (L.size() % 1000 == 0) {
+                        if (L.size() == 1000) {
+                            System.out.println("Found large Column at row " + row);
+                        }
+                        System.out.println("      - At column " + L.size());
+                    }
                     br.mark(100);
                 } else if (row < index) {
                     System.out.format(
@@ -211,6 +255,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     L = new LinearCombination<>();
                     br.reset();
                     index++;
+                    if (index % 100000 == 0){
+                        System.out.println((float) index / numC + "%");
+                    }
                 }
             }
             constraintMap.put(index, L);

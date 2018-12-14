@@ -74,27 +74,38 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             String[] constraintParameters = new BufferedReader(
                     new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
 
-            int numInputs = Integer.parseInt(constraintParameters[0]);
+            int numPrimary = Integer.parseInt(constraintParameters[0]);
             int numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
-            BufferedReader br = new BufferedReader(
-                    new FileReader(this.filePath() + ".witness"));
+            BufferedReader brA = new BufferedReader(
+                    new FileReader(this.filePath() + ".aux"));
 
+            BufferedReader brP = new BufferedReader(
+                    new FileReader(this.filePath() + ".primary"));
 
-            final Assignment<FieldT> oneFullAssignment = new Assignment<>();
-
-            String[] splitWitness = br.readLine().split("\\s+");
+            final Assignment<FieldT> fullAssignment = new Assignment<>();
 
             int count = 0;
-            for (String next: splitWitness) {
+            String[] splitAux = brA.readLine().split("\\s+");
+            for (String next: splitAux) {
                 final FieldT value = this.fieldParameters().construct(next);
-                oneFullAssignment.add(value);
+                fullAssignment.add(value);
                 count++;
             }
-            assert (count == numInputs + numAuxiliary);
+            brA.close();
+            String[] splitPrimary = brP.readLine().split("\\s+");
+            for (String next: splitPrimary) {
+                final FieldT value = this.fieldParameters().construct(next);
+                fullAssignment.add(value);
+                count++;
+            }
+            brP.close();
+            assert (count == numPrimary + numAuxiliary);
 
-            primary = new Assignment<>(oneFullAssignment.subList(0, numInputs));
-            auxiliary = new Assignment<>(oneFullAssignment.subList(numInputs, oneFullAssignment.size()));
+//            auxiliary = new Assignment<>(fullAssignment.subList(0, numAuxiliary));
+//            primary = new Assignment<>(fullAssignment.subList(numAuxiliary, fullAssignment.size()));
+            primary = new Assignment<>(fullAssignment.subList(0, numPrimary));
+            auxiliary = new Assignment<>(fullAssignment.subList(numPrimary, fullAssignment.size()));
 
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
