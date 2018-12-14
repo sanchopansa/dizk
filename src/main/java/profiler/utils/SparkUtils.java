@@ -51,6 +51,8 @@ public class SparkUtils {
             return "SparkZKSNARKLarge";
         } else if (s.equals("vmsm-sorted-g1")) {
             return "SparkVMSMSortedG1";
+        } else if (s.equals("input-feed")) {
+            return "Input Feed";
         } else {
             String exception = String.format("APP parameter '%s' not listed for profiling", s);
             throw new IllegalArgumentException(exception);
