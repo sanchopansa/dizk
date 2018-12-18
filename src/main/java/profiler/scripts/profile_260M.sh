@@ -7,11 +7,11 @@ export JAVA_HOME="/usr/lib/jvm/java-1.8.0"
 
 
 export APP='input-feed'
-export MEMORY=13G
-export SIZE=20
+export MEMORY=230G
+export SIZE=28
 export FILE_PATH="/data/test/hash_transform"
-export CORES=2
-export NUM_EXECUTORS=20
+export CORES=32
+export NUM_EXECUTORS=320
 export NUM_PARTITIONS=10
 
 /root/spark/bin/spark-submit \

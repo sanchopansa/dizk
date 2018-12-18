@@ -5,11 +5,11 @@
 
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0"
 
-
+export APP_TYPE='serial'
 export APP='input-feed'
 export MEMORY=13G
 export SIZE=20
-export FILE_PATH="/data/test/hash_transform"
+export FILE_PATH="/data/hash_1M/hash_transform"
 export CORES=2
 export NUM_EXECUTORS=20
 export NUM_PARTITIONS=10
@@ -34,5 +34,5 @@ export NUM_PARTITIONS=10
   --conf spark.logConf=true \
   --conf spark.eventLog.dir=/tmp/spark-events \
   --conf spark.eventLog.enabled=false \
-  --class "profiler.Profiler" \
-  /home/ec2-user/dizk-1.0.jar ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${APP} ${SIZE} ${NUM_PARTITIONS} ${FILE_PATH}
+  --class "profiler.InputProfiler" \
+  /home/ec2-user/dizk-1.0.jar ${APP_TYPE} ${APP} ${FILE_PATH} ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${NUM_PARTITIONS}
