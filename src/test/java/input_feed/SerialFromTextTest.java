@@ -16,7 +16,7 @@ import java.io.Serializable;
 
 import static org.junit.Assert.assertTrue;
 
-public class serialFromTextTest implements Serializable {
+public class SerialFromTextTest implements Serializable {
     private TextToSerialR1CS<Fp> converter;
     private R1CSRelation<Fp> r1cs;
     private Tuple2<Assignment<Fp>, Assignment<Fp>> witness;

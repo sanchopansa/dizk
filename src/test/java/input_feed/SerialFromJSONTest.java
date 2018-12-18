@@ -15,7 +15,7 @@ import java.io.Serializable;
 
 import static org.junit.Assert.assertTrue;
 
-public class serialFromJSONTest implements Serializable {
+public class SerialFromJSONTest implements Serializable {
     private JSONToSerialR1CS<Fp> converter;
     private BN254aFrParameters FpParameters;
     private Fp fieldFactory;

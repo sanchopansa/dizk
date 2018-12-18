@@ -20,7 +20,7 @@ import java.io.Serializable;
 import static org.junit.Assert.assertTrue;
 
 
-public class distributedFromTextTest implements Serializable {
+public class DistributedFromTextTest implements Serializable {
     private transient JavaSparkContext sc;
     private Configuration config;
     private BN254aFrParameters FpParameters;

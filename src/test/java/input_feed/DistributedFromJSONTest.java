@@ -19,7 +19,7 @@ import java.io.Serializable;
 import static org.junit.Assert.assertTrue;
 
 
-public class distributedFromJSONTest implements Serializable {
+public class DistributedFromJSONTest implements Serializable {
     private transient JavaSparkContext sc;
     private Configuration config;
     private BN254aFrParameters FpParameters;

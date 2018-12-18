@@ -17,3 +17,4 @@ ${SPARK_EC2_PATH} \
   --identity-file=${AWS_KEYPAIR_PATH} \
   --region=${AWS_REGION_ID} \
   login ${AWS_CLUSTER_NAME}
+
