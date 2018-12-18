@@ -1,15 +1,11 @@
 package input_feed;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
-
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.Fp;
-import configuration.Configuration;
 import input_feed.serial.TextToSerialR1CS;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import profiler.profiling.InputFeedProfiling;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
