@@ -33,8 +33,6 @@ public class Profiler {
             ZKSNARKProfiling.serialzkSNARKProfiling(config, size);
         } else if (app.equals("zksnark-large")) {
             ZKSNARKProfiling.serialzkSNARKLargeProfiling(config, size);
-        } else if (app.equals("input-feed")) {
-            System.out.println("[Warning] This profiler doesn't exist for serial testing");
         }
 
         System.out.format("\n[Profiler] - End Serial %s - %d size\n", SparkUtils.appName(app), size);
@@ -70,8 +68,6 @@ public class Profiler {
             ZKSNARKProfiling.distributedzkSNARKLargeProfiling(config, size);
         } else if (app.equals("vmsm-sorted-g1")) {
             VariableBaseMSMProfiling.distributedSortedVariableBaseMSMG1Profiling(config, size);
-        } else if (app.equals("input-feed")) {
-            InputFeedProfiling.distributedSetupProfiler(config, config.filePath());
         }
 
         System.out.format(
@@ -213,7 +209,7 @@ public class Profiler {
 
                 final Configuration config = new Configuration();
                 serialApp(app, config, size);
-            } else if (args.length == 5 || args.length == 6 || args.length == 7) {
+            } else if (args.length == 5 || args.length == 6) {
                 final int numExecutors = Integer.parseInt(args[0]);
                 final int numCores = Integer.parseInt(args[1]);
                 final int numMemory = Integer.parseInt(args[2].substring(0, args[2].length() - 1));
@@ -226,10 +222,6 @@ public class Profiler {
                     numPartitions = Integer.parseInt(args[5]);
                 }
 
-                String filePath = "";
-                if (args.length == 7) {
-                    filePath = args[6];
-                }
 
                 final SparkSession spark = SparkSession.builder().appName(SparkUtils.appName(app))
                         .getOrCreate();
@@ -247,13 +239,12 @@ public class Profiler {
                         numMemory,
                         numPartitions,
                         sc,
-                        StorageLevel.MEMORY_AND_DISK_SER(),
-                        filePath);
+                        StorageLevel.MEMORY_AND_DISK_SER());
 
                 distributedApp(app, config, size);
             } else {
                 System.out.println(
-                        "Args: {numExecutors} {numCores} {numMemory} {app} {size (log2)} {numPartitions(opt)} {filePath(opt)");
+                        "Args: {numExecutors} {numCores} {numMemory} {app} {size (log2)} {numPartitions(opt)}");
             }
         } else {
             final String app = "zksnark-large";
