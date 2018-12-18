@@ -3,7 +3,7 @@ package input_feed;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.Fp;
 import configuration.Configuration;
-import input_feed.distributed.TextToDistributedR1CS;
+import input_feed.distributed.JSONToDistributedR1CS;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.storage.StorageLevel;
@@ -19,14 +19,15 @@ import java.io.Serializable;
 import static org.junit.Assert.assertTrue;
 
 
-public class DistributedFromTextTest implements Serializable {
+public class DistributedFromJSONTest implements Serializable {
     private transient JavaSparkContext sc;
     private Configuration config;
     private BN254aFrParameters FpParameters;
-    private TextToDistributedR1CS<Fp> converter;
+    private JSONToDistributedR1CS<Fp> converter;
     private R1CSRelationRDD<Fp> r1cs;
     private Tuple2<Assignment<Fp>, JavaPairRDD<Long, Fp>> witness;
     private Fp fieldFactory;
+
 
     @Before
     public void setUp() {
@@ -36,7 +37,9 @@ public class DistributedFromTextTest implements Serializable {
         int numMemory = 1;
         int numPartitions = 2;
 
-        config = new Configuration(numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
+        config = new Configuration(
+                numExecutors, numCores, numMemory, numPartitions, sc, StorageLevel.MEMORY_ONLY());
+
         FpParameters = new BN254aFrParameters();
         fieldFactory = new Fp(1, FpParameters);
     }
@@ -48,9 +51,9 @@ public class DistributedFromTextTest implements Serializable {
     }
 
     @Test
-    public void distributedR1CSFromTextTest() {
-        String fileName = "src/test/data/text/contrived/small";
-        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
+    public void distributedR1CSFromJSONTest() {
+        String filePath = "src/test/data/json/satisfiable_pepper.json";
+        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
@@ -60,9 +63,9 @@ public class DistributedFromTextTest implements Serializable {
     }
 
     @Test
-    public void distributedR1CSFromTextTest2() {
-        String fileName = "src/test/data/text/overflow/overflow";
-        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
+    public void distributedR1CSFromJSONTest2() {
+        String filePath = "src/test/data/json/libsnark_tutorial.json";
+        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
 
         r1cs = converter.loadR1CS();
         assertTrue(r1cs.isValid());
@@ -71,4 +74,6 @@ public class DistributedFromTextTest implements Serializable {
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
+
 }
+

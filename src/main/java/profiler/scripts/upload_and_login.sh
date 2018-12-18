@@ -9,8 +9,8 @@ readonly MASTER=`$SPARK_EC2_PATH -k $AWS_KEYPAIR_NAME -i $AWS_KEYPAIR_PATH --reg
 scp -i $AWS_KEYPAIR_PATH $DIZK_REPO_PATH/target/dizk-1.0.jar ec2-user@$MASTER:/home/ec2-user/
 
 # Login
-$SPARK_EC2_PATH \
-  --key-pair=$AWS_KEYPAIR_NAME \
-  --identity-file=$AWS_KEYPAIR_PATH \
-  --region=$AWS_REGION_ID \
-  login $AWS_CLUSTER_NAME
+echo ${SPARK_EC2_PATH} \
+  --key-pair=${AWS_KEYPAIR_NAME} \
+  --identity-file=${AWS_KEYPAIR_PATH} \
+  --region=${AWS_REGION_ID} \
+  login ${AWS_CLUSTER_NAME}
