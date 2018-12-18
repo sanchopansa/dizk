@@ -4,10 +4,12 @@ import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.Fp;
+import configuration.Configuration;
 import input_feed.serial.TextToSerialR1CS;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import profiler.profiling.InputFeedProfiling;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
@@ -58,16 +60,5 @@ public class SerialFromTextTest implements Serializable {
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
-//    @Test
-//    public void mediumSerialR1CSFromTextTest() {
-//        String fileName = "src/test/data/text/pephash/hash_transform";
-//        converter = new TextToSerialR1CS<>(fileName, fieldFactory, true);
-//
-//        r1cs = converter.loadR1CS();
-//        assertTrue(r1cs.isValid());
-//
-//        witness = converter.loadWitness();
-//        assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
-//    }
 
 }

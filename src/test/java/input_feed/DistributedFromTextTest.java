@@ -84,12 +84,4 @@ public class DistributedFromTextTest implements Serializable {
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
-    @Test
-    public void distributedProfiling() {
-        String fileName = "src/test/data/text/pephash/hash_transform";
-        InputFeedProfiling.distributedConstraintMatrixProfiler(config, fileName);
-
-
-    }
-
 }

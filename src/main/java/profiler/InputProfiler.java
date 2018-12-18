@@ -50,11 +50,12 @@ public class InputProfiler {
                 serialApp(app, filePath);
 
             } else if (appType.equals("distributed")) {
-                final int numExecutors = Integer.parseInt(args[3]);
-                final int numCores = Integer.parseInt(args[4]);
-                final int numMemory = Integer.parseInt(args[5].substring(0, args[6].length() - 1));
-                final int numPartitions = Integer.parseInt(args[6]);
-                final String filePath = args[7];
+                final String filePath = args[3];
+                final int numExecutors = Integer.parseInt(args[4]);
+                final int numCores = Integer.parseInt(args[5]);
+                final int numMemory = Integer.parseInt(args[6].substring(0, args[7].length() - 1));
+                final int numPartitions = Integer.parseInt(args[8]);
+
 
                 final SparkSession spark = SparkSession.builder().appName(SparkUtils.appName(app)).getOrCreate();
                 spark.sparkContext().conf().set("spark.files.overwrite", "true");
