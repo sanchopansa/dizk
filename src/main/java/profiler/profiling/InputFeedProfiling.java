@@ -5,10 +5,8 @@ import algebra.curves.barreto_naehrig.bn254a.BN254aG1;
 import algebra.curves.barreto_naehrig.bn254a.BN254aG2;
 import algebra.curves.barreto_naehrig.bn254a.BN254aGT;
 import algebra.curves.barreto_naehrig.bn254a.BN254aPairing;
-import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG1Parameters;
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG2Parameters;
-import algebra.fields.Fp;
 import configuration.Configuration;
 import input_feed.distributed.TextToDistributedR1CS;
 import input_feed.serial.TextToSerialR1CS;
@@ -21,16 +19,7 @@ import zk_proof_systems.zkSNARK.*;
 import zk_proof_systems.zkSNARK.objects.CRS;
 import zk_proof_systems.zkSNARK.objects.Proof;
 
-import java.util.ArrayList;
-
 public class InputFeedProfiling {
-//    private TextToDistributedR1CS<BN254aFr> converter;
-//    private BN254aFrParameters FpParameters;
-//    private Fp fieldFactory;
-//    private R1CSRelationRDD<BN254aFr> r1cs;
-//    private Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness;
-//    private CRS<BN254aFr, BN254aG1, BN254aG2, BN254aGT> CRS;
-//    private Proof<BN254aG1, BN254aG2> proof;
 
     public static void distributedZKSnarkProfiler(final Configuration config, String filePath) {
 
@@ -38,8 +27,6 @@ public class InputFeedProfiling {
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
         final BN254aG2 g2Factory = new BN254aG2Parameters().ONE();
         final BN254aPairing pairing = new BN254aPairing();
-//        FpParameters = new BN254aFrParameters();
-//        fieldFactory = new Fp(1, FpParameters);
 
         TextToDistributedR1CS<BN254aFr>
                 converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
@@ -65,13 +52,14 @@ public class InputFeedProfiling {
         config.writeRuntimeLog(config.context());
 
         config.setContext("Check Satisfied");
-
+        config.beginRuntime("Check Satisfied");
         config.beginLog(config.context());
         System.out.println(r1cs.isSatisfied(witness._1(),witness._2()));
         config.endLog(config.context());
+        config.endRuntime("Check Satisfied");
 
-        Assignment primary = witness._1();
-        JavaPairRDD fullAssignment = witness._2();
+        Assignment<BN254aFr> primary = witness._1();
+        JavaPairRDD<Long, BN254aFr> fullAssignment = witness._2();
 
         long numConstraints = r1cs.numConstraints();
 
@@ -121,17 +109,15 @@ public class InputFeedProfiling {
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
         final BN254aG2 g2Factory = new BN254aG2Parameters().ONE();
         final BN254aPairing pairing = new BN254aPairing();
-//        FpParameters = new BN254aFrParameters();
-//        fieldFactory = new Fp(1, FpParameters);
 
-        TextToSerialR1CS<BN254aFr>
+        final TextToSerialR1CS<BN254aFr>
                 converter = new TextToSerialR1CS<>(filePath, fieldFactory, true);
 
         config.setContext("Load R1CS");
 
         config.beginLog(config.context());
         config.beginRuntime("Load R1CS");
-        R1CSRelation<BN254aFr> r1cs = converter.loadR1CS();
+        final R1CSRelation<BN254aFr> r1cs = converter.loadR1CS();
         config.endLog(config.context());
         config.endRuntime("Load R1CS");
 
@@ -141,7 +127,7 @@ public class InputFeedProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Load Witness");
-        Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = converter.loadWitness();
+        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = converter.loadWitness();
         config.endLog(config.context());
         config.endRuntime("Load Witness");
 
@@ -153,8 +139,8 @@ public class InputFeedProfiling {
         System.out.println(r1cs.isSatisfied(witness._1(),witness._2()));
         config.endLog(config.context());
 
-        Assignment primary = witness._1();
-        Assignment auxiliary = witness._2();
+        final Assignment<BN254aFr> primary = witness._1();
+        final Assignment<BN254aFr> auxiliary = witness._2();
 
         long numConstraints = r1cs.numConstraints();
 
@@ -175,7 +161,7 @@ public class InputFeedProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Prover");
-        Proof<BN254aG1, BN254aG2>
+        final Proof<BN254aG1, BN254aG2>
                 proof = SerialProver.prove(CRS.provingKey(), primary, auxiliary, fieldFactory, config);
         config.endLog(config.context());
         config.endRuntime("Prover");
