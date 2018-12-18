@@ -10,20 +10,20 @@ import scala.Tuple2;
 
 import java.util.ArrayList;
 
-public abstract class abstractFileToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+public abstract class AbstractFileToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
 
     private final String filePath;
     private final Configuration config;
     private final FieldT fieldParameters;
     private boolean negate;
 
-    abstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final FieldT _fieldParameters) {
+    AbstractFileToDistributedR1CS(final String _filePath, final Configuration _config, final FieldT _fieldParameters) {
         filePath = _filePath;
         config = _config;
         fieldParameters = _fieldParameters;
     }
 
-    abstractFileToDistributedR1CS(
+    AbstractFileToDistributedR1CS(
             final String _filePath,
             final Configuration _config,
             final FieldT _fieldParameters,

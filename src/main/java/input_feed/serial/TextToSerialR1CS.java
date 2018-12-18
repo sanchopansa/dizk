@@ -1,8 +1,6 @@
 package input_feed.serial;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.fields.Fp;
-import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import relations.objects.*;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
@@ -10,7 +8,7 @@ import scala.Tuple2;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends abstractFileToSerialR1CS<FieldT> {
+public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends AbstractFileToSerialR1CS<FieldT> {
 
     public TextToSerialR1CS(
             final String _filePath,

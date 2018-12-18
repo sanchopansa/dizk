@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Copy project to worker nodes
-./spark-ec2/copy-dir /home/ec2-user/
+/root/spark-ec2/copy-dir /home/ec2-user/
 
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0"
 

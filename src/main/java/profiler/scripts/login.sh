@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 . init.sh
+source ~/.ssh/aws/init.sh
 
 # Login
 ${SPARK_EC2_PATH} \

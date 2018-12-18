@@ -1,8 +1,6 @@
 package input_feed.serial;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.fields.Fp;
-import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -11,10 +9,9 @@ import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
 import java.io.FileReader;
-import java.lang.reflect.Field;
 
 public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends abstractFileToSerialR1CS<FieldT> {
+        extends AbstractFileToSerialR1CS<FieldT> {
 
     public JSONToSerialR1CS(
             final String _filePath,

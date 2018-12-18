@@ -1,9 +1,6 @@
 package input_feed.distributed;
 
-import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aFrParameters;
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.fields.Fp;
-import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.json.simple.JSONArray;
@@ -19,7 +16,7 @@ import java.io.FileReader;
 import java.util.ArrayList;
 
 public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends abstractFileToDistributedR1CS<FieldT> {
+        extends AbstractFileToDistributedR1CS<FieldT> {
 
     public JSONToDistributedR1CS(
             final String _filePath,

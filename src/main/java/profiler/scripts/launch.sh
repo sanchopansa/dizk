@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 . init.sh
+source ~/.ssh/aws/init.sh
 
 # Instantiate EC2 cluster
 ${SPARK_EC2_PATH} \

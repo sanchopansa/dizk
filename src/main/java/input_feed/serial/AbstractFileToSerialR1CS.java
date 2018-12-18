@@ -6,19 +6,19 @@ import relations.objects.Assignment;
 import relations.r1cs.R1CSRelation;
 import scala.Tuple2;
 
-public abstract class abstractFileToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+public abstract class AbstractFileToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
     private final String filePath;
     private final FieldT fieldFactory;
     private boolean negate;
 
-    abstractFileToSerialR1CS(
+    AbstractFileToSerialR1CS(
             final String _filePath, final FieldT _fieldFactory, final boolean _negate) {
         filePath = _filePath;
         fieldFactory = _fieldFactory;
         negate = _negate;
     }
 
-    abstractFileToSerialR1CS(
+    AbstractFileToSerialR1CS(
             final String _filePath, final FieldT _fieldFactory) {
         filePath = _filePath;
         fieldFactory = _fieldFactory;

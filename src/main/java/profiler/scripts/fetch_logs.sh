@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 . init.sh
+source ~/.ssh/aws/init.sh
 
 # Get master node URL
 readonly MASTER=`${SPARK_EC2_PATH} -k ${AWS_KEYPAIR_NAME} -i ${AWS_KEYPAIR_PATH} --region=${AWS_REGION_ID} get-master ${AWS_CLUSTER_NAME} | grep amazonaws.com`
