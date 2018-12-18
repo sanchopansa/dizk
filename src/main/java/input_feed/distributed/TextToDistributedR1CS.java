@@ -1,8 +1,6 @@
 package input_feed.distributed;
 
 import algebra.fields.AbstractFieldElementExpanded;
-import algebra.fields.Fp;
-import algebra.fields.abstractfieldparameters.AbstractFpParameters;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
@@ -19,7 +17,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-    extends abstractFileToDistributedR1CS<FieldT> {
+    extends AbstractFileToDistributedR1CS<FieldT> {
 
     public TextToDistributedR1CS(
             final String _filePath,
