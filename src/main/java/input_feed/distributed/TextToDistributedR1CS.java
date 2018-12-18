@@ -83,9 +83,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         this.config().beginLog("Count combinations");
         linearCombinationA.count();
-        System.out.println("Counted combination A");
         linearCombinationB.count();
-        System.out.println("Counted combination B");
         linearCombinationC.count();
         this.config().endLog("Count combinations");
 
@@ -120,6 +118,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
             this.config().beginRuntime("Serialize and Distribute Witness");
             this.config().beginLog("Witness serialization");
+
             String[] splitPrimary = brP.readLine().split("\\s+");
             int count = 0;
             String[] splitAux = brA.readLine().split("\\s+");
@@ -240,12 +239,6 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                         value = value.negate();
                     }
                     L.add(new LinearTerm<>(col, value));
-                    if (L.size() % 1000 == 0) {
-                        if (L.size() == 1000) {
-                            System.out.println("Found large Column at row " + row);
-                        }
-                        System.out.println("      - At column " + L.size());
-                    }
                     br.mark(100);
                 } else if (row < index) {
                     System.out.format(
@@ -255,9 +248,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                     L = new LinearCombination<>();
                     br.reset();
                     index++;
-                    if (index % 100000 == 0){
-                        System.out.println((float) index / numC + "%");
-                    }
+//                    if (index % 100000 == 0){
+//                        System.out.println((float) index / numC * 100 + "%");
+//                    }
                 }
             }
             constraintMap.put(index, L);
