@@ -6,17 +6,18 @@
 export JAVA_HOME="/usr/lib/jvm/java-1.8.0"
 
 
+export APP_TYPE='distributed'
 export APP='input-feed'
 export MEMORY=230G
 export SIZE=28
-export FILE_PATH="/data/test/hash_transform"
+export FILE_PATH="/data/zksnarks/hash_transform_260M"
 export CORES=32
 export NUM_EXECUTORS=320
-export NUM_PARTITIONS=10
+export NUM_PARTITIONS=320
 
 /root/spark/bin/spark-submit \
   --conf spark.driver.memory=${MEMORY} \
-  --conf spark.driver.maxResultSize=4G \
+  --conf spark.driver.maxResultSize=${MEMORY} \
   --conf spark.executor.cores=${CORES} \
   --total-executor-cores ${NUM_EXECUTORS} \
   --conf spark.executor.memory=${MEMORY} \
@@ -34,5 +35,5 @@ export NUM_PARTITIONS=10
   --conf spark.logConf=true \
   --conf spark.eventLog.dir=/tmp/spark-events \
   --conf spark.eventLog.enabled=false \
-  --class "profiler.Profiler" \
-  /home/ec2-user/dizk-1.0.jar ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${APP} ${SIZE} ${NUM_PARTITIONS} ${FILE_PATH}
+  --class "profiler.InputProfiler" \
+  /home/ec2-user/dizk-1.0.jar ${APP_TYPE} ${APP} ${FILE_PATH} ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${NUM_PARTITIONS}
