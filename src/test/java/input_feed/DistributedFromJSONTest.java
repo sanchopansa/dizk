@@ -53,24 +53,24 @@ public class DistributedFromJSONTest implements Serializable {
     @Test
     public void distributedR1CSFromJSONTest() {
         String filePath = "src/test/data/json/satisfiable_pepper.json";
-        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
+        converter = new JSONToDistributedR1CS<>(filePath, fieldFactory);
 
-        r1cs = converter.loadR1CS();
+        r1cs = converter.loadR1CS(config);
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness();
+        witness = converter.loadWitness(config);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
     @Test
     public void distributedR1CSFromJSONTest2() {
         String filePath = "src/test/data/json/libsnark_tutorial.json";
-        converter = new JSONToDistributedR1CS<>(filePath, config, fieldFactory);
+        converter = new JSONToDistributedR1CS<>(filePath, fieldFactory);
 
-        r1cs = converter.loadR1CS();
+        r1cs = converter.loadR1CS(config);
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness();
+        witness = converter.loadWitness(config);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 

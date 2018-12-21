@@ -15,67 +15,69 @@ import scala.Tuple2;
 import java.io.FileReader;
 import java.util.ArrayList;
 
-public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends AbstractFileToDistributedR1CS<FieldT> {
+public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+    private final String filePath;
+    private final int numInputs;
+    private final int numAuxiliary;
+    private final int numConstraints;
+    private final FieldT fieldParameters;
 
-    public JSONToDistributedR1CS(
-            final String _filePath,
-            final Configuration _config,
-            final FieldT _fpParameters
-    ) {
-        super(_filePath, _config, _fpParameters);
-    }
-
-    public JSONToDistributedR1CS(
-            final String _filePath,
-            final Configuration _config,
-            final FieldT _fpParameters,
-            final boolean _negate
-
-    ) {
-        super(_filePath, _config, _fpParameters, _negate);
-    }
-
-    @Override
-    public R1CSRelationRDD<FieldT> loadR1CS() {
+    public JSONToDistributedR1CS(final String _filePath, final FieldT _fieldParameters) {
+        filePath = _filePath;
+        fieldParameters = _fieldParameters;
 
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray header = new JSONArray();
+
+        try {
+            Object obj = parser.parse(new FileReader(filePath));
+            jsonObject = (JSONObject) obj;
+            header = (JSONArray) jsonObject.get("header");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        numInputs = Integer.parseInt((String) header.get(0));
+        numAuxiliary = Integer.parseInt((String) header.get(1));
+        numConstraints = Integer.parseInt((String) header.get(2));
+    }
+
+    public R1CSRelationRDD<FieldT> loadR1CS(Configuration config) {
+
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject;
         JSONArray constraintList = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
+            Object obj = parser.parse(new FileReader(filePath));
 
             jsonObject = (JSONObject) obj;
-            header = (JSONArray) jsonObject.get("header");
             constraintList = (JSONArray) jsonObject.get("constraints");
 
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        int numInputs = Integer.parseInt((String) header.get(0));
-        int numAuxiliary = Integer.parseInt((String) header.get(1));
+        assert (numConstraints == constraintList.size());
 
-        // TODO - do we really need to load this into an ArrayList?
-        int numConstraints = constraintList.size();
         JSONArray[] constraintArray = new JSONArray[numConstraints];
         for (int i = 0; i < numConstraints; i++) {
             constraintArray[i] = (JSONArray) constraintList.get(i);
         }
 
-        final ArrayList<Integer> partitions = constructPartitionArray(this.config().numPartitions(), numConstraints);
+        final ArrayList<Integer> partitions =
+                constructPartitionArray(config.numPartitions(), numConstraints);
 
         // Load Linear Combinations as RDD format
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationA = distributedCombinationFromJSON(
-                partitions, constraintArray, 0, numConstraints, false);
+                partitions, constraintArray, 0, numConstraints, config);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationB = distributedCombinationFromJSON(
-                partitions, constraintArray, 1, numConstraints, false);
+                partitions, constraintArray, 1, numConstraints, config);
 
         JavaPairRDD<Long, LinearTerm<FieldT>> combinationC = distributedCombinationFromJSON(
-                partitions, constraintArray, 2, numConstraints, this.negate());
+                partitions, constraintArray, 2, numConstraints, config);
 
         combinationA.count();
         combinationB.count();
@@ -87,15 +89,14 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         return new R1CSRelationRDD<>(constraints, numInputs, numAuxiliary);
     }
 
-    @Override
-    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness() {
+    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> loadWitness(Configuration config) {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray primaryInputs = new JSONArray();
         JSONArray auxInputs = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
+            Object obj = parser.parse(new FileReader(filePath));
 
             jsonObject = (JSONObject) obj;
             primaryInputs = (JSONArray) jsonObject.get("primary_input");
@@ -108,19 +109,19 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         // TODO - Serial assignment may not be necessary.
         final Assignment<FieldT> serialAssignment = new Assignment<>();
         for (Object input: primaryInputs) {
-            final FieldT value = this.fieldParameters().construct((String) input);
+            final FieldT value = fieldParameters.construct((String) input);
             serialAssignment.add(value);
         }
         for (Object input: auxInputs) {
-            final FieldT value = this.fieldParameters().construct((String) input);
+            final FieldT value = fieldParameters.construct((String) input);
             serialAssignment.add(value);
         }
 
         final long numVariables = primaryInputs.size() + auxInputs.size();
-        final int numExecutors = this.config().numExecutors();
+        final int numExecutors = config.numExecutors();
         final ArrayList<Integer> assignmentPartitions = constructPartitionArray(numExecutors, numVariables);
 
-        JavaPairRDD<Long, FieldT> oneFullAssignment = this.config().sparkContext()
+        JavaPairRDD<Long, FieldT> oneFullAssignment = config.sparkContext()
                 .parallelize(assignmentPartitions, numExecutors).flatMapToPair(part -> {
                     final long startIndex = part * (numVariables / numExecutors);
                     final long partSize = part == numExecutors ? numVariables %
@@ -131,7 +132,7 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                         assignment.add(new Tuple2<>(i, serialAssignment.get((int) i)));
                     }
                     return assignment.iterator();
-                }).persist(this.config().storageLevel());
+                }).persist(config.storageLevel());
 
         final Assignment<FieldT> primary = new Assignment<>(
                 serialAssignment.subList(0, primaryInputs.size()));
@@ -147,13 +148,13 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
             JSONArray[] constraintArray,
             int constraintArrayIndex,
             int numConstraints,
-            boolean negate
+            Configuration config
     ){
-        final int numPartitions = this.config().numPartitions();
+        final int numPartitions = config.numPartitions();
         assert(numConstraints >= numPartitions);
-        final FieldT fieldParams = this.fieldParameters();
+        final FieldT fieldParams = fieldParameters;
 
-        return this.config().sparkContext()
+        return config.sparkContext()
                 .parallelize(partitions, numPartitions).flatMapToPair(part -> {
                     final long partSize = part == numPartitions ?
                             numConstraints % (numConstraints / numPartitions) : numConstraints / numPartitions;
@@ -174,13 +175,22 @@ public class JSONToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
                                 // Handle case when key-value pairs are String: Long
                                 value = fieldParams.construct(Long.toString((long) next.get(key)));
                             }
-                            if (negate) {
-                                value = value.negate();
-                            }
                             T.add(new Tuple2<>(index, new LinearTerm<>(columnIndex, value)));
                         }
                     }
                     return T.iterator();
                 });
+    }
+
+    static ArrayList<Integer>
+    constructPartitionArray(int numPartitions, long numConstraints){
+        final ArrayList<Integer> partitions = new ArrayList<>();
+        for (int i = 0; i < numPartitions; i++) {
+            partitions.add(i);
+        }
+        if (numConstraints % 2 != 0) {
+            partitions.add(numPartitions);
+        }
+        return partitions;
     }
 }

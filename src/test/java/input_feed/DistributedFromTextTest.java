@@ -51,24 +51,24 @@ public class DistributedFromTextTest implements Serializable {
     @Test
     public void distributedR1CSFromTextTest() {
         String fileName = "src/test/data/text/contrived/small";
-        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
+        converter = new TextToDistributedR1CS<>(fileName, fieldFactory);
 
-        r1cs = converter.loadR1CS();
+        r1cs = converter.loadR1CS(config);
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness();
+        witness = converter.loadWitness(config);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 
     @Test
     public void distributedR1CSFromTextTest2() {
         String fileName = "src/test/data/text/overflow/overflow";
-        converter = new TextToDistributedR1CS<>(fileName, config, fieldFactory);
+        converter = new TextToDistributedR1CS<>(fileName, fieldFactory);
 
-        r1cs = converter.loadR1CS();
+        r1cs = converter.loadR1CS(config);
         assertTrue(r1cs.isValid());
 
-        witness = converter.loadWitness();
+        witness = converter.loadWitness(config);
         assertTrue(r1cs.isSatisfied(witness._1(), witness._2()));
     }
 

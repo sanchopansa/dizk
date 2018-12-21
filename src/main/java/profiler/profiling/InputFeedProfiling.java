@@ -29,13 +29,13 @@ public class InputFeedProfiling {
         final BN254aPairing pairing = new BN254aPairing();
 
         TextToDistributedR1CS<BN254aFr>
-                converter = new TextToDistributedR1CS<>(filePath, config, fieldFactory, true);
+                converter = new TextToDistributedR1CS<>(filePath, fieldFactory, true);
 
         config.setContext("Load R1CS");
 
         config.beginLog(config.context());
         config.beginRuntime("Load R1CS");
-        R1CSRelationRDD<BN254aFr> r1cs = converter.loadR1CS();
+        R1CSRelationRDD<BN254aFr> r1cs = converter.loadR1CS(config);
         config.endLog(config.context());
         config.endRuntime("Load R1CS");
 
@@ -45,7 +45,8 @@ public class InputFeedProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Load Witness");
-        Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness = converter.loadWitness();
+        Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>>
+                witness = converter.loadWitness(config);
         config.endLog(config.context());
         config.endRuntime("Load Witness");
 
