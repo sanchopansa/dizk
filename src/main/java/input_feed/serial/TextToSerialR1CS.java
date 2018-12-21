@@ -8,49 +8,54 @@ import scala.Tuple2;
 import java.io.BufferedReader;
 import java.io.FileReader;
 
-public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> extends AbstractFileToSerialR1CS<FieldT> {
+public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+    private final String filePath;
+    private final int numInputs;
+    private final int numAuxiliary;
+    private final int numConstraints;
+    private final FieldT fieldParameters;
+    private boolean negateCMatrix;
 
     public TextToSerialR1CS(
             final String _filePath,
-            final FieldT _fieldFactory) {
-        super(_filePath, _fieldFactory);
+            final FieldT _fieldParameters,
+            final boolean _negateCMatrix) {
+        filePath = _filePath;
+        fieldParameters = _fieldParameters;
+        negateCMatrix = _negateCMatrix;
+
+        String[] parameters = new String[3];
+        try{
+            parameters = new BufferedReader(
+                    new FileReader(filePath + ".problem_size")).readLine().split(" ");
+        } catch (Exception e){
+            System.err.println("Error: " + e.getMessage());
+        }
+        numInputs = Integer.parseInt(parameters[0]);
+        numAuxiliary = Integer.parseInt(parameters[1]);
+        numConstraints = Integer.parseInt(parameters[2]);
     }
 
-    public TextToSerialR1CS(
-            final String _filePath,
-            final FieldT _fieldFactory,
-            final boolean _negate) {
-        super(_filePath, _fieldFactory, _negate);
+    public TextToSerialR1CS(final String _filePath, final FieldT _fieldParameters) {
+        this(_filePath, _fieldParameters, false);
     }
 
-    @Override
     public R1CSRelation<FieldT> loadR1CS() {
         final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
-        int numInputs = -1;
-        int numAuxiliary = -1;
-
         try{
-            String[] constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
 
-            numInputs = Integer.parseInt(constraintParameters[0]);
-            numAuxiliary = Integer.parseInt(constraintParameters[1]);
-
-            int numConstraints = Integer.parseInt(constraintParameters[2]);
-
-            BufferedReader brA = new BufferedReader(new FileReader(this.filePath() + ".a"));
-            BufferedReader brB = new BufferedReader(new FileReader(this.filePath() + ".b"));
-            BufferedReader brC = new BufferedReader(new FileReader(this.filePath() + ".c"));
+            BufferedReader brA = new BufferedReader(new FileReader(filePath + ".a"));
+            BufferedReader brB = new BufferedReader(new FileReader(filePath + ".b"));
+            BufferedReader brC = new BufferedReader(new FileReader(filePath + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
                 LinearCombination<FieldT> A = makeRowAt(currRow, brA, false);
                 LinearCombination<FieldT> B = makeRowAt(currRow, brB, false);
-                LinearCombination<FieldT> C = makeRowAt(currRow, brC, this.negate());
+                LinearCombination<FieldT> C = makeRowAt(currRow, brC, negateCMatrix);
 
                 constraints.add(new R1CSConstraint<>(A, B, C));
             }
-
             brA.close();
             brB.close();
             brC.close();
@@ -62,7 +67,6 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         return new R1CSRelation<>(constraints, numInputs, numAuxiliary);
     }
 
-    @Override
     public Tuple2<Assignment<FieldT>, Assignment<FieldT>> loadWitness() {
 
         Assignment<FieldT> primary = new Assignment<>();
@@ -70,45 +74,41 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
         try{
             String[] constraintParameters = new BufferedReader(
-                    new FileReader(this.filePath() + ".problem_size")).readLine().split(" ");
+                    new FileReader(filePath + ".problem_size")).readLine().split(" ");
 
             int numPrimary = Integer.parseInt(constraintParameters[0]);
             int numAuxiliary = Integer.parseInt(constraintParameters[1]);
 
-            BufferedReader brA = new BufferedReader(
-                    new FileReader(this.filePath() + ".aux"));
-
-            BufferedReader brP = new BufferedReader(
-                    new FileReader(this.filePath() + ".primary"));
-
             final Assignment<FieldT> fullAssignment = new Assignment<>();
 
+            BufferedReader brA = new BufferedReader(new FileReader(filePath + ".aux"));
             int count = 0;
             String[] splitAux = brA.readLine().split("\\s+");
             for (String next: splitAux) {
-                final FieldT value = this.fieldParameters().construct(next);
+                final FieldT value = fieldParameters.construct(next);
                 fullAssignment.add(value);
                 count++;
             }
             brA.close();
+
+            BufferedReader brP = new BufferedReader(new FileReader(filePath + ".primary"));
             String[] splitPrimary = brP.readLine().split("\\s+");
             for (String next: splitPrimary) {
-                final FieldT value = this.fieldParameters().construct(next);
+                final FieldT value = fieldParameters.construct(next);
                 fullAssignment.add(value);
                 count++;
             }
             brP.close();
+
             assert (count == numPrimary + numAuxiliary);
 
 //            auxiliary = new Assignment<>(fullAssignment.subList(0, numAuxiliary));
 //            primary = new Assignment<>(fullAssignment.subList(numAuxiliary, fullAssignment.size()));
             primary = new Assignment<>(fullAssignment.subList(0, numPrimary));
             auxiliary = new Assignment<>(fullAssignment.subList(numPrimary, fullAssignment.size()));
-
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
-
         return new Tuple2<>(primary, auxiliary);
     }
 
@@ -127,15 +127,15 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
                 if (index == row) {
                     reader.mark(readAheadLimit);
-                    FieldT value = this.fieldParameters().construct(tokens[2]);
+                    FieldT value = fieldParameters.construct(tokens[2]);
                     if (negate) {
                         value = value.negate();
                     }
                     L.add(new LinearTerm<>(col, value));
                 } else if (row < index) {
                     System.out.format(
-                            "[WARNING] found term with index %d after index %d. This term will be ignored.\n", row, index);
-                } else if (row > index) {
+                            "[WARNING] Term with index %d after index %d will be ignored.\n", row, index);
+                } else {
                     reader.reset();
                     return L;
                 }

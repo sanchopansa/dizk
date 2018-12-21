@@ -10,42 +10,51 @@ import scala.Tuple2;
 
 import java.io.FileReader;
 
-public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>>
-        extends AbstractFileToSerialR1CS<FieldT> {
+public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+    private final String filePath;
+    private final int numInputs;
+    private final int numAuxiliary;
+    private final int numConstraints;
+    private final FieldT fieldParameters;
 
     public JSONToSerialR1CS(
             final String _filePath,
             final FieldT _fieldParameters) {
-        super(_filePath, _fieldParameters);
-    }
+        filePath = _filePath;
+        fieldParameters = _fieldParameters;
 
-    public JSONToSerialR1CS(
-            final String _filePath,
-            final FieldT _fieldParameters,
-            final boolean _negate) {
-        super(_filePath, _fieldParameters, _negate);
-    }
-
-    @Override
-    public R1CSRelation<FieldT> loadR1CS() {
         JSONParser parser = new JSONParser();
         JSONObject jsonObject;
         JSONArray header = new JSONArray();
+
+        try {
+            Object obj = parser.parse(new FileReader(filePath));
+            jsonObject = (JSONObject) obj;
+            header = (JSONArray) jsonObject.get("header");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        numInputs = Integer.parseInt((String) header.get(0));
+        numAuxiliary = Integer.parseInt((String) header.get(1));
+        numConstraints = Integer.parseInt((String) header.get(2));
+    }
+
+    public R1CSRelation<FieldT> loadR1CS() {
+        JSONParser parser = new JSONParser();
+        JSONObject jsonObject;
         JSONArray constraintList = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
+            Object obj = parser.parse(new FileReader(filePath));
             jsonObject = (JSONObject) obj;
-            header = (JSONArray) jsonObject.get("header");
             constraintList = (JSONArray) jsonObject.get("constraints");
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-        int numInputs = Integer.parseInt((String) header.get(0));
-        int numAuxiliary = Integer.parseInt((String) header.get(1));
+        assert (numConstraints == constraintList.size());
 
-        int numConstraints = constraintList.size();
         JSONArray[] constraintArray = new JSONArray[numConstraints];
         for (int i = 0; i < numConstraints; i++) {
             constraintArray[i] = (JSONArray) constraintList.get(i);
@@ -59,7 +68,7 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             final LinearCombination<FieldT> B = serialCombinationFromJSON(
                     (JSONObject) constraintArray[i].get(1), false);
             final LinearCombination<FieldT> C = serialCombinationFromJSON(
-                    (JSONObject) constraintArray[i].get(2), this.negate());
+                    (JSONObject) constraintArray[i].get(2), false);
 
             constraints.add(new R1CSConstraint<>(A, B, C));
         }
@@ -74,25 +83,23 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
         JSONArray auxInputs = new JSONArray();
 
         try {
-            Object obj = parser.parse(new FileReader(this.filePath()));
-
+            Object obj = parser.parse(new FileReader(filePath));
             jsonObject = (JSONObject) obj;
             primaryInputs = (JSONArray) jsonObject.get("primary_input");
             auxInputs = (JSONArray) jsonObject.get("aux_input");
-
         } catch (Exception e) {
             e.printStackTrace();
         }
 
         final Assignment<FieldT> primary = new Assignment<>();
         for (Object element: primaryInputs) {
-            final FieldT value = this.fieldParameters().construct((String) element);
+            final FieldT value = fieldParameters.construct((String) element);
             primary.add(value);
         }
 
         final Assignment<FieldT> auxiliary = new Assignment<>();
         for (Object element: auxInputs) {
-            final FieldT value = this.fieldParameters().construct((String) element);
+            final FieldT value = fieldParameters.construct((String) element);
             auxiliary.add(value);
         }
 
@@ -101,14 +108,13 @@ public class JSONToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
     private LinearCombination<FieldT> serialCombinationFromJSON (final JSONObject matrixRow, final boolean negate) {
         final LinearCombination<FieldT> L = new LinearCombination<>();
-
         for (Object keyObj: matrixRow.keySet()) {
             String key = (String) keyObj;
             FieldT value;
             try{
-                value = this.fieldParameters().construct((String) matrixRow.get(key));
+                value = fieldParameters.construct((String) matrixRow.get(key));
             } catch (ClassCastException e){
-                value = this.fieldParameters().construct(Long.toString((long) matrixRow.get(key)));
+                value = fieldParameters.construct(Long.toString((long) matrixRow.get(key)));
             }
             if (negate) {
                 value = value.negate();
