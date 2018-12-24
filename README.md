@@ -115,23 +115,14 @@ docker build -t dizk-container .
 docker run -it dizk-container bash
 ```
 
+This will put you inside a bash shell with a pre-installed and compiled project environment.
+
 ### Testing
 
 This library comes with unit tests for each of the provided modules. Run the tests with:
 ```$xslt
 mvn test
-``` 
-
-### Build and Run Docker Container
-
 ```
-cd your_dizk_project_directory
-
-docker build -t dizk-container .
-docker run --rm -it dizk-container bash
-```
-
-This will put you inside a bash shell with a preinstalled and compiled project environment.
 
 ## Profiler
 
