@@ -29,7 +29,7 @@ public class InputFeedProfiling {
         final BN254aPairing pairing = new BN254aPairing();
 
         TextToDistributedR1CS<BN254aFr>
-                converter = new TextToDistributedR1CS<>(filePath, fieldFactory, true);
+                converter = new TextToDistributedR1CS<>(filePath, fieldFactory, true, true);
 
         config.setContext("Load R1CS");
 
