@@ -11,7 +11,7 @@ This project is currently supporting input of *Rank 1 Constraint Systems* (soon 
    
 ### Text
 
-Should consist of 4 files; One for each of matrix `a, b` and `c` and on for the problem size.
+Should consist of 4 files; One for each of matrix `a, b` and `c` and one for the problem size.
 
 **filePath/problem_size** consists of a single line of text with 3 space separated integers, `i a c`, representing numInputs, numAuxiliary and numConstraints respectively.
 
@@ -58,6 +58,24 @@ Each of `filePath/matrix_a, filePath/matrix_b` and `filePath/matrix_c` consists 
       [0, 0, 0, 0, 2]]
  ```
  
+ #### Witness data
+
+Witness data represents the vector `z = [1 | public | private]` in the matrix equation Az &#8857; Bz = Cz where &#8857; denotes the  [*Hadamard product*](https://en.wikipedia.org/wiki/Hadamard_product_(matrices\))
+is read from two separate files `filePath/public` and `filePath/aux` which should be line separated integers having the same number of lines as declared in the `.problem_size` file from above
+
+In the example above, valid witness information would be
+
+|**public**|**aux**|
+|----------|-------|
+| 1        |  1    |
+| 0        |  1    |
+| 1        |       |
+
+to denote the vector `z^t = [1, 0, 1, 1, 1]`. Note that 1 is assumed to be the first entry of the data which is taken from the first value os public
+
+At this moment, in our profiling we have temporarily reversed the order of information (based on libsnark output which appears to reverse the role of public and private information on the level of the matrix indexing. 
+This means that the above example would be interpreted as `z^t = [1, 1, 1, 0, 1] = [1 | private | public]`
+
 ### JSON
 
 The JSON file format of a R1CS (with inputs) consists of 4 keys: `header`, `primary_inputs, aux_input` and `constraints` each having list values as demonstrated in the following example:
