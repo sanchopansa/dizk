@@ -101,20 +101,9 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
 
         final int numAux = numAuxiliary;
         JavaPairRDD<Long, FieldT> auxAssignment =
-                config.sparkContext().textFile(path + ".aux").flatMapToPair(line -> {
-            final ArrayList<Tuple2<Long, FieldT>> temp = new ArrayList<>();
-
-            String[] splitAux = line.split(" ");
-            assert (splitAux.length == numAux);
-            for (int i=0; i < splitAux.length; i++) {
-                try {
-                    temp.add(new Tuple2<>((long) i, field.construct(splitAux[i])));
-                } catch (Exception e) {
-                    System.out.format("Aux exception [%s] with %d, %s", e, i, splitAux[i]);
-                }
-            }
-            return temp.iterator();
-        }).persist(config.storageLevel());
+                config.sparkContext().textFile(path + ".aux.test").zipWithIndex().flatMapToPair(
+                        line -> Collections.singleton(new Tuple2<>(line._2, field.construct(line._1))).iterator()
+                ).persist(config.storageLevel());
 
         JavaPairRDD<Long, FieldT> primaryAssignment =
                 config.sparkContext().textFile(path + ".public").flatMapToPair(line -> {
