@@ -15,6 +15,7 @@ import java.util.*;
 
 public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<FieldT>> {
     private final String filePath;
+    private boolean useFileSlash;
     private final int numInputs;
     private final int numAuxiliary;
     private final int numConstraints;
@@ -24,9 +25,11 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     public TextToDistributedR1CS(
             final String _filePath,
             final FieldT _fieldParameters,
-            final boolean _negateCMatrix) {
+            final boolean _negateCMatrix,
+            final boolean _useFileSlash) {
 
         filePath = _filePath;
+        useFileSlash = _useFileSlash;
         fieldParameters = _fieldParameters;
         negateCMatrix = _negateCMatrix;
 
@@ -43,7 +46,7 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
     }
 
     public TextToDistributedR1CS(final String _filePath, final FieldT _fieldParameters) {
-        this(_filePath, _fieldParameters, false);
+        this(_filePath, _fieldParameters, false, false);
     }
 
     public R1CSRelationRDD<FieldT> loadR1CS(Configuration config) {
@@ -51,20 +54,38 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         // Need at least one constraint per partition!
         assert(numConstraints >= config.numPartitions());
         config.beginRuntime("Distribute Constraints");
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA =
+        JavaPairRDD<Long, LinearTerm<FieldT>> combinationA =
                 distributedCombination(config, filePath + ".a", false);
 
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB =
+        JavaPairRDD<Long, LinearTerm<FieldT>> combinationB =
                 distributedCombination(config, filePath + ".b", false);
 
-        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC =
+        JavaPairRDD<Long, LinearTerm<FieldT>> combinationC =
                 distributedCombination(config, filePath + ".c", negateCMatrix);
         config.endRuntime("Distribute Constraints");
+
+        config.beginRuntime("Count combinations");
+
+        config.beginLog("Count A");
+        combinationA.count();
+        config.endLog("Count A");
+
+        config.beginLog("Count B");
+        combinationB.count();
+        config.endLog("Count B");
+
+        config.beginLog("Count C");
+        combinationC.count();
+        config.endLog("Count C");
+
+        config.endRuntime("Count combinations");
+
         final R1CSConstraintsRDD<FieldT> constraints = new R1CSConstraintsRDD<>(
-                linearCombinationA,
-                linearCombinationB,
-                linearCombinationC,
-                numConstraints);
+                combinationA,
+                combinationB,
+                combinationC,
+                numConstraints
+        );
 
         return new R1CSRelationRDD<>(constraints, numInputs, numAuxiliary);
     }
@@ -75,59 +96,72 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         config.beginLog("Distribute witness");
 
         FieldT field = fieldParameters;
-        JavaPairRDD<Long, FieldT> auxAssignment = config.sparkContext()
-                .textFile(filePath + ".aux").flatMapToPair(line -> {
-            final ArrayList<Tuple2<Long, FieldT>> temp = new ArrayList<>();
-            String[] splitAux = line.split("\\s+");
-            for (int i=0; i < splitAux.length; i++){
-                final FieldT value = field.construct(splitAux[i]);
-                temp.add(new Tuple2<>((long) i, value));
-            }
-            return temp.iterator();
-        });
+        String path = filePath;
+        if (useFileSlash) { path = "file://" + path; }
 
         final int numAux = numAuxiliary;
-        JavaPairRDD<Long, FieldT> primaryAssignment = config.sparkContext()
-                .textFile(filePath + ".primary").flatMapToPair(line -> {
+        JavaPairRDD<Long, FieldT> auxAssignment =
+                config.sparkContext().textFile(path + ".aux.test").zipWithIndex().flatMapToPair(
+                        line -> Collections.singleton(new Tuple2<>(line._2, field.construct(line._1))).iterator()
+                ).persist(config.storageLevel());
+
+        JavaPairRDD<Long, FieldT> primaryAssignment =
+                config.sparkContext().textFile(path + ".public").flatMapToPair(line -> {
             final ArrayList<Tuple2<Long, FieldT>> temp = new ArrayList<>();
-            String[] splitPrimary = line.split("\\s+");
-            for (int i=0; i < splitPrimary.length; i++){
-                final FieldT value = field.construct(splitPrimary[i]);
-                temp.add(new Tuple2<>((long) numAux + i, value));
+
+            String[] splitPrimary = line.split(" ");
+            for (int i=0; i < splitPrimary.length; i++) {
+                try {
+                    temp.add(new Tuple2<>((long) numAux + i, field.construct(splitPrimary[i])));
+                } catch (Exception e){
+                    System.out.format("Primary exception [%s] with %d, %s", e, i, splitPrimary[i]);
+                }
             }
             return temp.iterator();
-        });
+        }).persist(config.storageLevel());
 
         JavaPairRDD<Long, FieldT> fullAssignment = auxAssignment.union(primaryAssignment);
+
+        config.beginLog("Count assignment");
+        fullAssignment.count();
+        config.endLog("Count assignment");
 
         config.endLog("Distribute witness");
         config.endRuntime("Distribute Witness");
 
+
+        config.beginLog("Serialize Primary");
+        config.beginRuntime("Serialize Primary");
         final Assignment<FieldT> primary = new Assignment<>();
-        for (long i=0; i < numInputs; i++){
-            List<FieldT> element = fullAssignment.lookup(i);
-            assert(element.size() == 1);
-            primary.add(element.get(0));
+//        TODO - take this out later
+        for (int i=0; i < numInputs; i++){
+            final FieldT value = field.one();
+            primary.add(value);
         }
+
+        config.endLog("Serialize Primary");
+        config.endRuntime("Serialize Primary");
+
         return new Tuple2<>(primary, fullAssignment);
     }
 
     private JavaPairRDD<Long, LinearTerm<FieldT>>
     distributedCombination(Configuration config, String fileName, boolean negate) {
-        config.beginLog("Distributing constraint matrix " + fileName);
         FieldT field = fieldParameters;
+        String path = fileName;
+        if (useFileSlash) { path = "file://" + path; }
+
+        config.beginLog("Distributing constraint matrix " + fileName);
         JavaPairRDD<Long, LinearTerm<FieldT>> res =
-                config.sparkContext().textFile(fileName).flatMapToPair(line -> {
+                config.sparkContext().textFile(path).flatMapToPair(line -> {
             String[] tokens = line.split(" ");
             int col = Integer.parseInt(tokens[0]);
             long row = Long.parseLong(tokens[1]);
             FieldT value = field.construct(tokens[2]);
-            if (negate) {
-                value = value.negate();
-            }
+            if (negate) { value = value.negate(); }
             return Collections.singleton(
                     new Tuple2<>(row, new LinearTerm<>(col, value))).iterator();
-        });
+        }).persist(config.storageLevel());
         config.endLog("Distributing constraint matrix " + fileName);
         return res;
     }

@@ -91,7 +91,7 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
             }
             brA.close();
 
-            BufferedReader brP = new BufferedReader(new FileReader(filePath + ".primary"));
+            BufferedReader brP = new BufferedReader(new FileReader(filePath + ".public"));
             String[] splitPrimary = brP.readLine().split("\\s+");
             for (String next: splitPrimary) {
                 final FieldT value = fieldParameters.construct(next);
