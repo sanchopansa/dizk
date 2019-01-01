@@ -129,16 +129,14 @@ public class TextToDistributedR1CS<FieldT extends AbstractFieldElementExpanded<F
         config.endLog("Distribute witness");
         config.endRuntime("Distribute Witness");
 
-
         config.beginLog("Serialize Primary");
         config.beginRuntime("Serialize Primary");
         final Assignment<FieldT> primary = new Assignment<>();
-//        TODO - take this out later
-        for (int i=0; i < numInputs; i++){
-            final FieldT value = field.one();
-            primary.add(value);
+        for (long i=0; i < numInputs; i++){
+            List<FieldT> element = fullAssignment.lookup(i);
+            assert(element.size() == 1);
+            primary.add(element.get(0));
         }
-
         config.endLog("Serialize Primary");
         config.endRuntime("Serialize Primary");
 
