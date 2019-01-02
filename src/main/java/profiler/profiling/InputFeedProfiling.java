@@ -52,13 +52,6 @@ public class InputFeedProfiling {
 
         config.writeRuntimeLog(config.context());
 
-        config.setContext("Check Satisfied");
-        config.beginRuntime("Check Satisfied");
-        config.beginLog(config.context());
-        System.out.println(r1cs.isSatisfied(witness._1(),witness._2()));
-        config.endLog(config.context());
-        config.endRuntime("Check Satisfied");
-
         Assignment<BN254aFr> primary = witness._1();
         JavaPairRDD<Long, BN254aFr> fullAssignment = witness._2();
 
@@ -133,12 +126,6 @@ public class InputFeedProfiling {
         config.endRuntime("Load Witness");
 
         config.writeRuntimeLog(config.context());
-
-        config.setContext("Check Satisfied");
-
-        config.beginLog(config.context());
-        System.out.println(r1cs.isSatisfied(witness._1(),witness._2()));
-        config.endLog(config.context());
 
         final Assignment<BN254aFr> primary = witness._1();
         final Assignment<BN254aFr> auxiliary = witness._2();
