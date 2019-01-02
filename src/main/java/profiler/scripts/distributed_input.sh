@@ -28,4 +28,4 @@ source ./input_env.sh
   --conf spark.eventLog.dir=/tmp/spark-events \
   --conf spark.eventLog.enabled=false \
   --class "profiler.InputProfiler" \
-  /home/ec2-user/dizk-1.0.jar ${APP_TYPE} ${APP} ${FILE_PATH} ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${NUM_PARTITIONS}#!/usr/bin/env bash
+  /home/ec2-user/dizk-1.0.jar ${APP_TYPE} ${APP} ${FILE_PATH} ${NUM_EXECUTORS} ${CORES} ${MEMORY} ${NUM_PARTITIONS}
