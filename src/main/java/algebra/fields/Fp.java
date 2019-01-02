@@ -107,6 +107,10 @@ public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable
         return new Fp(value, FpParameters);
     }
 
+    public Fp construct(final String value) {
+        return new Fp(value, FpParameters);
+    }
+
     public BigInteger toBigInteger() {
         return number;
     }
