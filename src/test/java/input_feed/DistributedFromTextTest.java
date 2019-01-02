@@ -10,7 +10,6 @@ import org.apache.spark.storage.StorageLevel;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import profiler.profiling.InputFeedProfiling;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
