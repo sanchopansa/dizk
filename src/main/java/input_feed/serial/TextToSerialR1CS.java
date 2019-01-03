@@ -83,18 +83,17 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
             BufferedReader brA = new BufferedReader(new FileReader(filePath + ".aux"));
             int count = 0;
-            String[] splitAux = brA.readLine().split("\\s+");
-            for (String next: splitAux) {
-                final FieldT value = fieldParameters.construct(next);
+            String nextLine;
+            while ((nextLine = brA.readLine()) != null) {
+                final FieldT value = fieldParameters.construct(nextLine);
                 fullAssignment.add(value);
                 count++;
             }
             brA.close();
 
             BufferedReader brP = new BufferedReader(new FileReader(filePath + ".public"));
-            String[] splitPrimary = brP.readLine().split("\\s+");
-            for (String next: splitPrimary) {
-                final FieldT value = fieldParameters.construct(next);
+            while ((nextLine = brP.readLine()) != null) {
+                final FieldT value = fieldParameters.construct(nextLine);
                 fullAssignment.add(value);
                 count++;
             }
