@@ -45,20 +45,20 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
         try{
 
-            BufferedReader brA = new BufferedReader(new FileReader(filePath + ".a"));
-            BufferedReader brB = new BufferedReader(new FileReader(filePath + ".b"));
-            BufferedReader brC = new BufferedReader(new FileReader(filePath + ".c"));
+            BufferedReader matrixA = new BufferedReader(new FileReader(filePath + ".a"));
+            BufferedReader matrixB = new BufferedReader(new FileReader(filePath + ".b"));
+            BufferedReader matrixC = new BufferedReader(new FileReader(filePath + ".c"));
 
             for (int currRow = 0; currRow < numConstraints; currRow++){
-                LinearCombination<FieldT> A = makeRowAt(currRow, brA, false);
-                LinearCombination<FieldT> B = makeRowAt(currRow, brB, false);
-                LinearCombination<FieldT> C = makeRowAt(currRow, brC, negateCMatrix);
+                LinearCombination<FieldT> A = makeRowAt(currRow, matrixA, false);
+                LinearCombination<FieldT> B = makeRowAt(currRow, matrixB, false);
+                LinearCombination<FieldT> C = makeRowAt(currRow, matrixC, negateCMatrix);
 
                 constraints.add(new R1CSConstraint<>(A, B, C));
             }
-            brA.close();
-            brB.close();
-            brC.close();
+            matrixA.close();
+            matrixB.close();
+            matrixC.close();
 
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
@@ -81,23 +81,23 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
 
             final Assignment<FieldT> fullAssignment = new Assignment<>();
 
-            BufferedReader brA = new BufferedReader(new FileReader(filePath + ".aux"));
+            BufferedReader auxFile = new BufferedReader(new FileReader(filePath + ".aux"));
             int count = 0;
             String nextLine;
-            while ((nextLine = brA.readLine()) != null) {
+            while ((nextLine = auxFile.readLine()) != null) {
                 final FieldT value = fieldParameters.construct(nextLine);
                 fullAssignment.add(value);
                 count++;
             }
-            brA.close();
+            auxFile.close();
 
-            BufferedReader brP = new BufferedReader(new FileReader(filePath + ".public"));
-            while ((nextLine = brP.readLine()) != null) {
+            BufferedReader publicFile = new BufferedReader(new FileReader(filePath + ".public"));
+            while ((nextLine = publicFile.readLine()) != null) {
                 final FieldT value = fieldParameters.construct(nextLine);
                 fullAssignment.add(value);
                 count++;
             }
-            brP.close();
+            publicFile.close();
 
             assert (count == numPrimary + numAuxiliary);
 
