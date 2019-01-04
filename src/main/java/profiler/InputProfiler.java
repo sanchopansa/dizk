@@ -52,7 +52,7 @@ public class InputProfiler {
                 final String filePath = args[2];
                 final int numExecutors = Integer.parseInt(args[3]);
                 final int numCores = Integer.parseInt(args[4]);
-                final int numMemory = Integer.parseInt(args[5].substring(0, args[6].length() - 1));
+                final int numMemory = Integer.parseInt(args[5].substring(0, args[5].length() - 1));
                 final int numPartitions = Integer.parseInt(args[6]);
 
 
