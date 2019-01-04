@@ -112,8 +112,7 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
     }
 
     private LinearCombination<FieldT> makeRowAt (long index, BufferedReader reader, boolean negate) {
-        final LinearCombination<FieldT> L = new LinearCombination<>();
-
+        final LinearCombination<FieldT> combination = new LinearCombination<>();
         try {
             final int readAheadLimit = 100;
             String nextLine;
@@ -130,18 +129,18 @@ public class TextToSerialR1CS<FieldT extends AbstractFieldElementExpanded<FieldT
                     if (negate) {
                         value = value.negate();
                     }
-                    L.add(new LinearTerm<>(col, value));
+                    combination.add(new LinearTerm<>(col, value));
                 } else if (row < index) {
                     System.out.format(
                             "[WARNING] Term with index %d after index %d will be ignored.\n", row, index);
                 } else {
                     reader.reset();
-                    return L;
+                    return combination;
                 }
             }
         } catch (Exception e){
             System.err.println("Error: " + e.getMessage());
         }
-        return L;
+        return combination;
     }
 }
