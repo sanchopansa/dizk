@@ -374,15 +374,23 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
             System.err.println("Error while reading file: " +  e.getMessage());
         }
 
-        return new R1CSRelation<>(constraints, numInputs, numNizkInputs);
+        int lastInputIndex = inputWireIds.get(inputWireIds.size() - 1);
+
+        return new R1CSRelation<>(constraints, lastInputIndex, wireValues.size() - lastInputIndex);
     }
 
     public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitness() {
         Assignment<FieldT> primary = new Assignment<>();
         primary.add(fieldParams.one());
         Assignment<FieldT> auxiliary = new Assignment<>();
+
+        int lastInputIndex = inputWireIds.get(inputWireIds.size() - 1);
+
         for (int i = 1; i < wireValues.size(); i++) {
-            auxiliary.add(wireValues.get(i));
+            if (i < lastInputIndex)
+                primary.add(wireValues.get(i));
+            else
+                auxiliary.add(wireValues.get(i));
         }
         return new Tuple2<>(primary, auxiliary);
     }

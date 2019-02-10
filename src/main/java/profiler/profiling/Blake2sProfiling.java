@@ -114,15 +114,19 @@ public class Blake2sProfiling {
 
         PinocchioReader<BN254aFr> reader = new PinocchioReader<>(
                 fieldFactory,
-                "/home/sancho/Documents/filecoin/Blake2s.arith",
-                "/home/sancho/Documents/filecoin/Blake2s_Sample_Run1.in");
+                "/home/sancho/circuits/blake2s-circuit-small/Blake2s.arith",
+                "/home/sancho/circuits/blake2s-circuit-small/Blake2s_Sample_Run1.in");
 
         config.setContext("Load R1CS");
 
         config.beginLog(config.context());
         config.beginRuntime("Load R1CS");
         final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
-//        final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
+
+        System.out.println("Num inputs: " + r1cs.numInputs());
+        System.out.println("Num constraints: " + r1cs.numConstraints());
+        System.out.println("Num variables: " + r1cs.numVariables());
+
         config.endLog(config.context());
         config.endRuntime("Load R1CS");
 
@@ -132,7 +136,6 @@ public class Blake2sProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Load Witness");
-//        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = converter.loadWitness();
         final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitness();
         config.endLog(config.context());
         config.endRuntime("Load Witness");
