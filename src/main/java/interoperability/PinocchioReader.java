@@ -183,15 +183,9 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                         } else if (instruction.startsWith("const-mul-neg-")) {
                             opcode = MULCONST_OPCODE;
                             constant = fieldParams.fromHexString(instruction.substring("const-mul-neg-".length())).negate();
-//                            constant = new Fp(
-//                                    new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
-//                                    fieldParams).negate();
                         } else if (instruction.startsWith("const-mul-")) {
                             opcode = MULCONST_OPCODE;
                             constant = fieldParams.fromHexString(instruction.substring("const-mul-".length()));
-//                            constant = new Fp(
-//                                    new BigInteger(instruction.substring("const-mul-".length()), 16),
-//                                    fieldParams);
                         } else {
                             System.err.println("Unrecognized instruction: " + line);
                             System.exit(1);
@@ -359,9 +353,6 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                         FieldT constant = fieldParams
                                 .fromHexString(instruction.substring("const-mul-neg-".length()))
                                 .negate();
-//                        Fp constant = new Fp(
-//                                new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
-//                                fieldParams).negate();
                         A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
                         B.add(new LinearTerm<>(0, fieldParams.one()));
                         C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
@@ -369,9 +360,6 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                         assert numGateInputs == 1 && numGateOutputs == 1;
                         FieldT constant = fieldParams
                                 .fromHexString(instruction.substring("const-mul-".length()));
-//                        Fp constant = new Fp(
-//                                new BigInteger(instruction.substring("const-mul-".length()), 16),
-//                                fieldParams);
                         A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
                         B.add(new LinearTerm<>(0, fieldParams.one()));
                         C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
