@@ -128,6 +128,8 @@ public class ComplexField extends AbstractFieldElementExpanded<ComplexField>
         return new ComplexField(value);
     }
 
+    public ComplexField fromHexString(final String value) { return new ComplexField(new BigInteger(value, 16).doubleValue()); }
+
     public BigInteger toBigInteger() {
         // Undefined behavior, method for modulus fields, do not use.
         return new BigInteger(Double.toString(Math.sqrt(re * re + im * im)));
