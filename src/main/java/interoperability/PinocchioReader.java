@@ -377,7 +377,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         return new R1CSRelation<>(constraints, numInputs, numNizkInputs);
     }
 
-    public Tuple2<Assignment, Assignment> getWitness() {
+    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitness() {
         Assignment<FieldT> primary = new Assignment<>();
         primary.add(fieldParams.one());
         Assignment<FieldT> auxiliary = new Assignment<>();
@@ -394,9 +394,9 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         }
 
         final BN254aFields.BN254aFr fieldFactory = new BN254aFields.BN254aFr(2L);
-        PinocchioReader reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
-        R1CSRelation r1cs = reader.constructR1CSSerial();
-        Tuple2<Assignment, Assignment> witness = reader.getWitness();
+        final PinocchioReader<BN254aFields.BN254aFr> reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
+        final R1CSRelation<BN254aFields.BN254aFr> r1cs = reader.constructR1CSSerial();
+        final Tuple2<Assignment<BN254aFields.BN254aFr>, Assignment<BN254aFields.BN254aFr>> witness = reader.getWitness();
 
         System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
     }
