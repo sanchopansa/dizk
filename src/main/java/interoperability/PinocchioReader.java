@@ -1,7 +1,7 @@
 package interoperability;
 
-import algebra.curves.barreto_naehrig.bn254b.bn254b_parameters.BN254bFrParameters;
-import algebra.fields.Fp;
+import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.fields.AbstractFieldElementExpanded;
 import relations.objects.*;
 import relations.r1cs.R1CSRelation;
 
@@ -17,7 +17,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class PinocchioReader {
+import scala.Tuple2;
+
+public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>> {
 
     private static final short ADD_OPCODE = 1;
     private static final short MUL_OPCODE = 2;
@@ -40,20 +42,22 @@ public class PinocchioReader {
     private ArrayList<Integer> inputWireIds;
     private ArrayList<Integer> nizkWireIds;
     private ArrayList<Integer> outputWireIds;
-    private BN254bFrParameters fieldParams;
+    private FieldT fieldParams;
 
-    private HashMap<Integer, Fp> wireValues;
+    private HashMap<Integer, FieldT> wireValues;
 
 
-    private PinocchioReader(String circuitFileName, String inputsFileName) {
+    public PinocchioReader(final FieldT fieldParams, final String circuitFileName, final String inputsFileName) {
         this.circuitFileName = circuitFileName;
         this.inputsFileName = inputsFileName;
-        this.fieldParams = new BN254bFrParameters();
+        this.fieldParams = fieldParams;
 
         this.inputWireIds = new ArrayList<>();
         this.nizkWireIds = new ArrayList<>();
         this.outputWireIds = new ArrayList<>();
         this.wireValues = new HashMap<>();
+
+        this.parseAndEval();
     }
 
     private void parseAndEval() {
@@ -89,13 +93,13 @@ public class PinocchioReader {
                     }
                     int wireId = Integer.parseInt(parts[0]);
                     // Wire value is encoded as hex
-                    Fp wireVal = new Fp(new BigInteger(parts[1], 16), fieldParams);
+                    FieldT wireVal = fieldParams.fromHexString(parts[1]);
                     wireValues.put(wireId, wireVal);
                 }
             }
 
-            Fp oneElement = fieldParams.ONE;
-            Fp zeroElement = fieldParams.ZERO;
+            FieldT oneElement = fieldParams.one();
+            FieldT zeroElement = fieldParams.zero();
 
             int numGateInputs;
             int numGateOutputs;
@@ -140,7 +144,7 @@ public class PinocchioReader {
                         numGateOutputs = Integer.parseInt(matcher.group(4));
                         String outputStr = matcher.group(5);
 
-                        ArrayList<Fp> inValues = new ArrayList<>();
+                        ArrayList<FieldT> inValues = new ArrayList<>();
                         Arrays.stream(inputStr.split(" "))
                                 .forEach(x -> {
                                     int wireId = Integer.parseInt(x);
@@ -157,7 +161,7 @@ public class PinocchioReader {
                         assert numGateOutputs == outWires.size();
 
                         short opcode = 0;
-                        Fp constant = oneElement;
+                        FieldT constant = oneElement;
 
                         if (instruction.equals("add")) {
                             opcode = ADD_OPCODE;
@@ -178,22 +182,24 @@ public class PinocchioReader {
                             opcode = SPLIT_OPCODE;
                         } else if (instruction.startsWith("const-mul-neg-")) {
                             opcode = MULCONST_OPCODE;
-                            constant = new Fp(
-                                    new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
-                                    fieldParams).negate();
+                            constant = fieldParams.fromHexString(instruction.substring("const-mul-neg-".length())).negate();
+//                            constant = new Fp(
+//                                    new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
+//                                    fieldParams).negate();
                         } else if (instruction.startsWith("const-mul-")) {
                             opcode = MULCONST_OPCODE;
-                            constant = new Fp(
-                                    new BigInteger(instruction.substring("const-mul-".length()), 16),
-                                    fieldParams);
+                            constant = fieldParams.fromHexString(instruction.substring("const-mul-".length()));
+//                            constant = new Fp(
+//                                    new BigInteger(instruction.substring("const-mul-".length()), 16),
+//                                    fieldParams);
                         } else {
                             System.err.println("Unrecognized instruction: " + line);
                             System.exit(1);
                         }
 
                         if (opcode == ADD_OPCODE) {
-                            Fp sum = zeroElement;
-                            for (Fp val: inValues)
+                            FieldT sum = zeroElement;
+                            for (FieldT val: inValues)
                                 sum = sum.add(val);
                             wireValues.put(outWires.get(0), sum);
                         } else if (opcode == MUL_OPCODE) {
@@ -206,9 +212,9 @@ public class PinocchioReader {
                         } else if (opcode == NONZEROCHECK_OPCODE) {
                             wireValues.put(outWires.get(1), inValues.get(0).equals(zeroElement) ? zeroElement : oneElement);
                         } else if (opcode == PACK_OPCODE) {
-                            Fp sum = zeroElement;
-                            Fp two = oneElement;
-                            for (Fp val: inValues) {
+                            FieldT sum = zeroElement;
+                            FieldT two = oneElement;
+                            for (FieldT val: inValues) {
                                 sum = sum.add(two.mul(val));
                                 two = two.add(two);
                             }
@@ -242,8 +248,8 @@ public class PinocchioReader {
         }
     }
 
-    private R1CSRelation<Fp> constructR1CS() {
-        final R1CSConstraints<Fp> constraints = new R1CSConstraints<>();
+    public R1CSRelation<FieldT> constructR1CSSerial() {
+        final R1CSConstraints<FieldT> constraints = new R1CSConstraints<>();
 
         String line;
         int numGateInputs;
@@ -251,9 +257,9 @@ public class PinocchioReader {
 
         try (BufferedReader cr = new BufferedReader(new FileReader(circuitFileName))) {
             while ((line = cr.readLine()) != null) {
-                final LinearCombination<Fp> A = new LinearCombination<>();
-                final LinearCombination<Fp> B = new LinearCombination<>();
-                final LinearCombination<Fp> C = new LinearCombination<>();
+                final LinearCombination<FieldT> A = new LinearCombination<>();
+                final LinearCombination<FieldT> B = new LinearCombination<>();
+                final LinearCombination<FieldT> C = new LinearCombination<>();
 
                 if (line.isEmpty() || line.startsWith("#")) {
                     continue;
@@ -271,68 +277,68 @@ public class PinocchioReader {
                         assert numGateOutputs == 1;
                         Arrays.stream(inputStr.split(" ")).forEach(v -> {
                             long wireId = Long.parseLong(v);
-                            A.add(new LinearTerm<>(wireId, fieldParams.ONE));
+                            A.add(new LinearTerm<>(wireId, fieldParams.one()));
                         });
-                        B.add(new LinearTerm<>(0, fieldParams.ONE));
+                        B.add(new LinearTerm<>(0, fieldParams.one()));
                         int outputWire = Integer.parseInt(outputStr);
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one()));
                     } else if (instruction.equals("mul")) {
                         assert numGateInputs == 2 && numGateOutputs == 1;
                         String[] inputWires = inputStr.split(" ");
                         int outputWire = Integer.parseInt(outputStr);
-                        A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.ONE));
-                        B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.ONE));
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE));
+                        A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.one()));
+                        B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.one()));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one()));
                     } else if (instruction.equals("xor")) {
                         assert numGateInputs == 2 && numGateOutputs == 1;
                         String[] inputWires = inputStr.split(" ");
                         int inWire1 = Integer.parseInt(inputWires[0]);
                         int inWire2 = Integer.parseInt(inputWires[1]);
                         int outputWire = Integer.parseInt(outputStr);
-                        A.add(new LinearTerm<>(inWire1, fieldParams.ONE.add(fieldParams.ONE)));
-                        B.add(new LinearTerm<>(inWire2, fieldParams.ONE));
-                        C.add(new LinearTerm<>(inWire1, fieldParams.ONE));
-                        C.add(new LinearTerm<>(inWire2, fieldParams.ONE));
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE.negate()));
+                        A.add(new LinearTerm<>(inWire1, fieldParams.one().add(fieldParams.one())));
+                        B.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                        C.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                        C.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one().negate()));
                     } else if (instruction.equals("or")) {
                         assert numGateInputs == 2 && numGateOutputs == 1;
                         String[] inputWires = inputStr.split(" ");
                         int inWire1 = Integer.parseInt(inputWires[0]);
                         int inWire2 = Integer.parseInt(inputWires[1]);
                         int outputWire = Integer.parseInt(outputStr);
-                        A.add(new LinearTerm<>(inWire1, fieldParams.ONE));
-                        B.add(new LinearTerm<>(inWire2, fieldParams.ONE));
-                        C.add(new LinearTerm<>(inWire1, fieldParams.ONE));
-                        C.add(new LinearTerm<>(inWire2, fieldParams.ONE));
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE.negate()));
+                        A.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                        B.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                        C.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                        C.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one().negate()));
                     } else if (instruction.equals("assert")) {
                         assert numGateInputs == 2 && numGateOutputs == 1;
                         String[] inputWires = inputStr.split(" ");
                         int outputWire = Integer.parseInt(outputStr);
-                        A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.ONE));
-                        B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.ONE));
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE));
+                        A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.one()));
+                        B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.one()));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one()));
                     } else if (instruction.equals("pack")) {
                         assert numGateOutputs == 1;
                         String[] inputWires = inputStr.split(" ");
                         int outputWire = Integer.parseInt(outputStr);
-                        Fp two = fieldParams.ONE;
+                        FieldT two = fieldParams.one();
                         for (int i = 0; i < inputWires.length; i++) {
                             A.add(new LinearTerm<>(Integer.parseInt(inputWires[i]), two));
                             two = two.add(two);
                         }
-                        B.add(new LinearTerm<>(0, fieldParams.ONE));
-                        C.add(new LinearTerm<>(outputWire, fieldParams.ONE));
+                        B.add(new LinearTerm<>(0, fieldParams.one()));
+                        C.add(new LinearTerm<>(outputWire, fieldParams.one()));
                     } else if (instruction.equals("zerop")) {
                         assert numGateInputs == 1 && numGateOutputs == 2;
                     } else if (instruction.equals("split")) {
                         assert numGateInputs == 1;
                         String[] outputWires = outputStr.split(" ");
                         int inputWire = Integer.parseInt(inputStr);
-                        Fp two = fieldParams.ONE;
+                        FieldT two = fieldParams.one();
 
-                        A.add(new LinearTerm<>(inputWire, fieldParams.ONE));
-                        B.add(new LinearTerm<>(0, fieldParams.ONE));
+                        A.add(new LinearTerm<>(inputWire, fieldParams.one()));
+                        B.add(new LinearTerm<>(0, fieldParams.one()));
 
                         for (int i = 0; i < outputWires.length; i++) {
                             int wireId = Integer.parseInt(outputWires[i]);
@@ -340,30 +346,35 @@ public class PinocchioReader {
                             two = two.add(two);
 
                             // Enforce bitness
-                            final LinearCombination<Fp> Aa = new LinearCombination<>();
-                            final LinearCombination<Fp> Bb = new LinearCombination<>();
-                            final LinearCombination<Fp> Cc = new LinearCombination<>();
-                            Aa.add(new LinearTerm<>(wireId, fieldParams.ONE));
-                            Bb.add(new LinearTerm<>(wireId, fieldParams.ONE));
-                            Cc.add(new LinearTerm<>(wireId, fieldParams.ONE));
+                            final LinearCombination<FieldT> Aa = new LinearCombination<>();
+                            final LinearCombination<FieldT> Bb = new LinearCombination<>();
+                            final LinearCombination<FieldT> Cc = new LinearCombination<>();
+                            Aa.add(new LinearTerm<>(wireId, fieldParams.one()));
+                            Bb.add(new LinearTerm<>(wireId, fieldParams.one()));
+                            Cc.add(new LinearTerm<>(wireId, fieldParams.one()));
                             constraints.add(new R1CSConstraint<>(Aa, Bb, Cc));
                         }
                     } else if (instruction.startsWith("const-mul-neg-")) {
                         assert numGateInputs == 1 && numGateOutputs == 1;
-                        Fp constant = new Fp(
-                                new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
-                                fieldParams).negate();
+                        FieldT constant = fieldParams
+                                .fromHexString(instruction.substring("const-mul-neg-".length()))
+                                .negate();
+//                        Fp constant = new Fp(
+//                                new BigInteger(instruction.substring("const-mul-neg-".length()), 16),
+//                                fieldParams).negate();
                         A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
-                        B.add(new LinearTerm<>(0, fieldParams.ONE));
-                        C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.ONE));
+                        B.add(new LinearTerm<>(0, fieldParams.one()));
+                        C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
                     } else if (instruction.startsWith("const-mul-")) {
                         assert numGateInputs == 1 && numGateOutputs == 1;
-                        Fp constant = new Fp(
-                                new BigInteger(instruction.substring("const-mul-".length()), 16),
-                                fieldParams);
+                        FieldT constant = fieldParams
+                                .fromHexString(instruction.substring("const-mul-".length()));
+//                        Fp constant = new Fp(
+//                                new BigInteger(instruction.substring("const-mul-".length()), 16),
+//                                fieldParams);
                         A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
-                        B.add(new LinearTerm<>(0, fieldParams.ONE));
-                        C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.ONE));
+                        B.add(new LinearTerm<>(0, fieldParams.one()));
+                        C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
                     } else {
                         System.err.println("Unrecognized instruction: " + line);
                         System.exit(1);
@@ -378,23 +389,27 @@ public class PinocchioReader {
         return new R1CSRelation<>(constraints, numInputs, numNizkInputs);
     }
 
+    public Tuple2<Assignment, Assignment> getWitness() {
+        Assignment<FieldT> primary = new Assignment<>();
+        primary.add(fieldParams.one());
+        Assignment<FieldT> auxiliary = new Assignment<>();
+        for (int i = 1; i < wireValues.size(); i++) {
+            auxiliary.add(wireValues.get(i));
+        }
+        return new Tuple2<>(primary, auxiliary);
+    }
+
     public static void main(String[] args) {
         if (args.length != 2) {
             System.err.println("You must specify the paths to the arithmetic circuit and the input parameters");
             System.exit(1);
         }
-        PinocchioReader reader = new PinocchioReader(args[0], args[1]);
-        reader.parseAndEval();
 
-        R1CSRelation r1cs = reader.constructR1CS();
+        final BN254aFields.BN254aFr fieldFactory = new BN254aFields.BN254aFr(2L);
+        PinocchioReader reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
+        R1CSRelation r1cs = reader.constructR1CSSerial();
+        Tuple2<Assignment, Assignment> witness = reader.getWitness();
 
-        Assignment<Fp> primary = new Assignment<>();
-        primary.add(reader.fieldParams.ONE);
-        Assignment<Fp> auxiliary = new Assignment<>();
-        for (int i = 1; i < reader.wireValues.size(); i++) {
-            auxiliary.add(reader.wireValues.get(i));
-        }
-
-        System.out.println("R1CS satisfied: " + r1cs.isSatisfied(primary, auxiliary));
+        System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
     }
 }
