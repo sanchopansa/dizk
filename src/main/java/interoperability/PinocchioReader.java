@@ -1,7 +1,10 @@
 package interoperability;
 
-import algebra.curves.barreto_naehrig.bn254a.BN254aFields;
+import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.fields.AbstractFieldElementExpanded;
+import configuration.Configuration;
+import org.apache.spark.api.java.JavaPairRDD;
+import org.apache.spark.api.java.JavaRDD;
 import relations.objects.*;
 import relations.r1cs.R1CSRelation;
 
@@ -9,14 +12,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
 
 public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>> {
@@ -379,6 +380,143 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         return new R1CSRelation<>(constraints, lastInputIndex, wireValues.size() - lastInputIndex);
     }
 
+    public JavaRDD<R1CSConstraint<FieldT>> constructR1CSDistributed(Configuration config) {
+        JavaRDD<R1CSConstraint<FieldT>> res = config
+                .sparkContext()
+                .textFile("")
+                .flatMap(line -> {
+                    Matcher matcher = PINOCCHIO_INSTRUCTION.matcher(line);
+                    if (line.isEmpty() || line.startsWith("#")) {
+                        return Collections.emptyIterator();
+                    } else if (matcher.matches()) {
+                        String instruction = matcher.group(1);
+                        int numGateInputs = Integer.parseInt(matcher.group(2));
+                        String inputStr = matcher.group(3);
+                        int numGateOutputs = Integer.parseInt(matcher.group(4));
+                        String outputStr = matcher.group(5);
+
+                        ArrayList<R1CSConstraint<FieldT>> constraints = new ArrayList<>();
+                        LinearCombination<FieldT> A = new LinearCombination<>();
+                        LinearCombination<FieldT> B = new LinearCombination<>();
+                        LinearCombination<FieldT> C = new LinearCombination<>();
+
+                        if (instruction.equals("add")) {
+                            assert numGateOutputs == 1;
+                            Arrays.stream(inputStr.split(" ")).forEach(v -> {
+                                long wireId = Long.parseLong(v);
+                                A.add(new LinearTerm<>(wireId, fieldParams.one()));
+                            });
+                            B.add(new LinearTerm<>(0, fieldParams.one()));
+                            int outputWire = Integer.parseInt(outputStr);
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("mul")) {
+                            assert numGateInputs == 2 && numGateOutputs == 1;
+                            String[] inputWires = inputStr.split(" ");
+                            int outputWire = Integer.parseInt(outputStr);
+                            A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.one()));
+                            B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.one()));
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("xor")) {
+                            assert numGateInputs == 2 && numGateOutputs == 1;
+                            String[] inputWires = inputStr.split(" ");
+                            int inWire1 = Integer.parseInt(inputWires[0]);
+                            int inWire2 = Integer.parseInt(inputWires[1]);
+                            int outputWire = Integer.parseInt(outputStr);
+                            A.add(new LinearTerm<>(inWire1, fieldParams.one().add(fieldParams.one())));
+                            B.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                            C.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                            C.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one().negate()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("or")) {
+                            assert numGateInputs == 2 && numGateOutputs == 1;
+                            String[] inputWires = inputStr.split(" ");
+                            int inWire1 = Integer.parseInt(inputWires[0]);
+                            int inWire2 = Integer.parseInt(inputWires[1]);
+                            int outputWire = Integer.parseInt(outputStr);
+                            A.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                            B.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                            C.add(new LinearTerm<>(inWire1, fieldParams.one()));
+                            C.add(new LinearTerm<>(inWire2, fieldParams.one()));
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one().negate()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("assert")) {
+                            assert numGateInputs == 2 && numGateOutputs == 1;
+                            String[] inputWires = inputStr.split(" ");
+                            int outputWire = Integer.parseInt(outputStr);
+                            A.add(new LinearTerm<>(Integer.parseInt(inputWires[0]), fieldParams.one()));
+                            B.add(new LinearTerm<>(Integer.parseInt(inputWires[1]), fieldParams.one()));
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("pack")) {
+                            assert numGateOutputs == 1;
+                            String[] inputWires = inputStr.split(" ");
+                            int outputWire = Integer.parseInt(outputStr);
+                            FieldT two = fieldParams.one();
+                            for (int i = 0; i < inputWires.length; i++) {
+                                A.add(new LinearTerm<>(Integer.parseInt(inputWires[i]), two));
+                                two = two.add(two);
+                            }
+                            B.add(new LinearTerm<>(0, fieldParams.one()));
+                            C.add(new LinearTerm<>(outputWire, fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.equals("zerop")) {
+                            assert numGateInputs == 1 && numGateOutputs == 2;
+                        } else if (instruction.equals("split")) {
+                            assert numGateInputs == 1;
+                            String[] outputWires = outputStr.split(" ");
+                            int inputWire = Integer.parseInt(inputStr);
+                            FieldT two = fieldParams.one();
+
+                            A.add(new LinearTerm<>(inputWire, fieldParams.one()));
+                            B.add(new LinearTerm<>(0, fieldParams.one()));
+
+                            for (int i = 0; i < outputWires.length; i++) {
+                                int wireId = Integer.parseInt(outputWires[i]);
+                                C.add(new LinearTerm<>(wireId, two));
+                                two = two.add(two);
+
+                                // Enforce bitness
+                                final LinearCombination<FieldT> Aa = new LinearCombination<>();
+                                final LinearCombination<FieldT> Bb = new LinearCombination<>();
+                                final LinearCombination<FieldT> Cc = new LinearCombination<>();
+                                Aa.add(new LinearTerm<>(wireId, fieldParams.one()));
+                                Bb.add(new LinearTerm<>(wireId, fieldParams.one()));
+                                Cc.add(new LinearTerm<>(wireId, fieldParams.one()));
+                                constraints.add(new R1CSConstraint<>(Aa, Bb, Cc));
+                            }
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.startsWith("const-mul-neg-")) {
+                            assert numGateInputs == 1 && numGateOutputs == 1;
+                            FieldT constant = fieldParams
+                                    .fromHexString(instruction.substring("const-mul-neg-".length()))
+                                    .negate();
+                            A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
+                            B.add(new LinearTerm<>(0, fieldParams.one()));
+                            C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else if (instruction.startsWith("const-mul-")) {
+                            assert numGateInputs == 1 && numGateOutputs == 1;
+                            FieldT constant = fieldParams
+                                    .fromHexString(instruction.substring("const-mul-".length()));
+                            A.add(new LinearTerm<>(Integer.parseInt(inputStr), constant));
+                            B.add(new LinearTerm<>(0, fieldParams.one()));
+                            C.add(new LinearTerm<>(Integer.parseInt(outputStr), fieldParams.one()));
+                            constraints.add(new R1CSConstraint<>(A, B, C));
+                        } else {
+                            System.err.println("Unrecognized instruction: " + line);
+                            throw new RuntimeException("Unrecognized instruction");
+                        }
+                        return constraints.iterator();
+                    } else {
+                        return Collections.emptyIterator();
+                    }
+                });
+        return res;
+    }
+
     public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitness() {
         Assignment<FieldT> primary = new Assignment<>();
         primary.add(fieldParams.one());
@@ -401,10 +539,10 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
             System.exit(1);
         }
 
-        final BN254aFields.BN254aFr fieldFactory = new BN254aFields.BN254aFr(2L);
-        final PinocchioReader<BN254aFields.BN254aFr> reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
-        final R1CSRelation<BN254aFields.BN254aFr> r1cs = reader.constructR1CSSerial();
-        final Tuple2<Assignment<BN254aFields.BN254aFr>, Assignment<BN254aFields.BN254aFr>> witness = reader.getWitness();
+        final BN254aFr fieldFactory = new BN254aFr(2L);
+        final PinocchioReader<BN254aFr> reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
+        final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
+        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitness();
 
         System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
     }
