@@ -9,10 +9,8 @@ import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG1Parameter
 import algebra.curves.barreto_naehrig.bn254a.bn254a_parameters.BN254aG2Parameters;
 import configuration.Configuration;
 import interoperability.PinocchioReader;
-import org.apache.spark.api.java.JavaPairRDD;
 import relations.objects.Assignment;
 import relations.r1cs.R1CSRelation;
-import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
 import zk_proof_systems.zkSNARK.*;
 import zk_proof_systems.zkSNARK.objects.CRS;
@@ -136,7 +134,7 @@ public class Blake2sProfiling {
 
         config.beginLog(config.context());
         config.beginRuntime("Load Witness");
-        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitness();
+        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitnessSerial();
         config.endLog(config.context());
         config.endRuntime("Load Witness");
 

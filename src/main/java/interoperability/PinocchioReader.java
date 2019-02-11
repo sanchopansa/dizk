@@ -3,24 +3,27 @@ package interoperability;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.fields.AbstractFieldElementExpanded;
 import configuration.Configuration;
-import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
+import org.apache.spark.api.java.JavaSparkContext;
+import org.apache.spark.sql.SparkSession;
+import org.apache.spark.storage.StorageLevel;
+import profiler.utils.SparkUtils;
 import relations.objects.*;
 import relations.r1cs.R1CSRelation;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.Serializable;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
 
-public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>> {
+public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>> implements  Serializable {
 
     private static final short ADD_OPCODE = 1;
     private static final short MUL_OPCODE = 2;
@@ -383,7 +386,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
     public JavaRDD<R1CSConstraint<FieldT>> constructR1CSDistributed(Configuration config) {
         JavaRDD<R1CSConstraint<FieldT>> res = config
                 .sparkContext()
-                .textFile("")
+                .textFile(circuitFileName)
                 .flatMap(line -> {
                     Matcher matcher = PINOCCHIO_INSTRUCTION.matcher(line);
                     if (line.isEmpty() || line.startsWith("#")) {
@@ -517,7 +520,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         return res;
     }
 
-    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitness() {
+    public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitnessSerial() {
         Assignment<FieldT> primary = new Assignment<>();
         primary.add(fieldParams.one());
         Assignment<FieldT> auxiliary = new Assignment<>();
@@ -534,16 +537,47 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
     }
 
     public static void main(String[] args) {
-        if (args.length != 2) {
-            System.err.println("You must specify the paths to the arithmetic circuit and the input parameters");
+        if (args.length != 3) {
+            System.err.println("You must specify the paths to the arithmetic circuit, the input parameters and the type of app");
             System.exit(1);
         }
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final PinocchioReader<BN254aFr> reader = new PinocchioReader<>(fieldFactory, args[0], args[1]);
-        final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
-        final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitness();
 
-        System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
+        if (args[2].equals("serial")) {
+            final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
+            final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitnessSerial();
+
+            System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
+        } else {
+            final int numExecutors = 4;
+            final int numCores = 4;
+            final int numMemory = 4;
+            final int numPartitions = 4;
+
+
+            final SparkSession spark = SparkSession
+                    .builder()
+                    .master("local[4]")
+                    .appName(SparkUtils.appName("blake2s"))
+                    .getOrCreate();
+            spark.sparkContext().conf().set("spark.files.overwrite", "true");
+            spark.sparkContext().conf().set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+            spark.sparkContext().conf().registerKryoClasses(SparkUtils.zksparkClasses());
+
+            JavaSparkContext sc;
+            sc = new JavaSparkContext(spark.sparkContext());
+
+            final Configuration config = new Configuration(
+                    numExecutors,
+                    numCores,
+                    numMemory,
+                    numPartitions,
+                    sc,
+                    StorageLevel.MEMORY_AND_DISK_SER());
+            JavaRDD r1csConstraints = reader.constructR1CSDistributed(config);
+            System.out.println(r1csConstraints.count());
+        }
     }
 }
