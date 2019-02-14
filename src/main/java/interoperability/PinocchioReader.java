@@ -4,7 +4,6 @@ import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.fields.AbstractFieldElementExpanded;
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaPairRDD;
-import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
 import org.apache.spark.storage.StorageLevel;
@@ -673,6 +672,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                     StorageLevel.MEMORY_AND_DISK_SER());
             R1CSRelationRDD<BN254aFr> r1csConstraints = reader.constructR1CSDistributed(config);
             Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness = reader.getWitnessDistributed(config);
+
             System.out.println(r1csConstraints.numConstraints());
             System.out.println(r1csConstraints.isSatisfied(witness._1, witness._2));
         }
