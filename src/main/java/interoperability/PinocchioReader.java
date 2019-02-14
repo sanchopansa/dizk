@@ -3,6 +3,7 @@ package interoperability;
 import algebra.curves.barreto_naehrig.bn254a.BN254aFields.BN254aFr;
 import algebra.fields.AbstractFieldElementExpanded;
 import configuration.Configuration;
+import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.sql.SparkSession;
@@ -21,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import relations.r1cs.R1CSRelationRDD;
 import scala.Tuple2;
 
 public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>> implements  Serializable {
@@ -383,8 +385,8 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         return new R1CSRelation<>(constraints, lastInputIndex, wireValues.size() - lastInputIndex);
     }
 
-    public JavaRDD<R1CSConstraint<FieldT>> constructR1CSDistributed(Configuration config) {
-        JavaRDD<R1CSConstraint<FieldT>> res = config
+    public R1CSRelationRDD<FieldT> constructR1CSDistributed(Configuration config) {
+        JavaPairRDD<Long, R1CSConstraint<FieldT>> r1cs = config
                 .sparkContext()
                 .textFile(circuitFileName)
                 .flatMap(line -> {
@@ -516,8 +518,60 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                     } else {
                         return Collections.emptyIterator();
                     }
-                });
-        return res;
+                }).zipWithIndex().mapToPair(v -> new Tuple2<>(v._2, v._1)).persist(StorageLevel.MEMORY_AND_DISK());
+
+        long numConstraints = r1cs.count();
+
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationA = r1cs.mapPartitionsToPair(part -> {
+            ArrayList<Tuple2<Long, LinearTerm<FieldT>>> res = new ArrayList<>();
+
+            while(part.hasNext()) {
+                Tuple2<Long, R1CSConstraint<FieldT>> constraint = part.next();
+                Long row = constraint._1;
+                constraint._2.A().terms().forEach(t -> res.add(new Tuple2<>(row, t)));
+            }
+
+            return res.iterator();
+        }).persist(StorageLevel.MEMORY_AND_DISK());
+
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationB = r1cs.mapPartitionsToPair(part -> {
+            ArrayList<Tuple2<Long, LinearTerm<FieldT>>> res = new ArrayList<>();
+
+            while(part.hasNext()) {
+                Tuple2<Long, R1CSConstraint<FieldT>> constraint = part.next();
+                Long row = constraint._1;
+                constraint._2.B().terms().forEach(t -> res.add(new Tuple2<>(row, t)));
+            }
+
+            return res.iterator();
+        }).persist(StorageLevel.MEMORY_AND_DISK());
+
+        JavaPairRDD<Long, LinearTerm<FieldT>> linearCombinationC = r1cs.mapPartitionsToPair(part -> {
+            ArrayList<Tuple2<Long, LinearTerm<FieldT>>> res = new ArrayList<>();
+
+            while(part.hasNext()) {
+                Tuple2<Long, R1CSConstraint<FieldT>> constraint = part.next();
+                Long row = constraint._1;
+                constraint._2.C().terms().forEach(t -> res.add(new Tuple2<>(row, t)));
+            }
+
+            return res.iterator();
+        }).persist(StorageLevel.MEMORY_AND_DISK());
+
+        final R1CSConstraintsRDD<FieldT> constraints = new R1CSConstraintsRDD<>(
+                linearCombinationA,
+                linearCombinationB,
+                linearCombinationC,
+                numConstraints);
+
+        int lastInputIndex = inputWireIds.get(inputWireIds.size() - 1);
+
+        final R1CSRelationRDD<FieldT> r1csRdd = new R1CSRelationRDD<>(
+                constraints,
+                lastInputIndex,
+                wireValues.size() - lastInputIndex);
+
+        return r1csRdd;
     }
 
     public Tuple2<Assignment<FieldT>, Assignment<FieldT>> getWitnessSerial() {
@@ -536,6 +590,47 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
         return new Tuple2<>(primary, auxiliary);
     }
 
+    public Tuple2<Assignment<FieldT>, JavaPairRDD<Long, FieldT>> getWitnessDistributed(Configuration config) {
+
+        final int numExecutors = config.numExecutors();
+        final long numVariables = wireValues.size();
+        final ArrayList<Integer> assignmentPartitions = constructPartitionArray(numExecutors, numVariables);
+
+        Assignment<FieldT> primary = new Assignment<>();
+        primary.add(fieldParams.one());
+        int lastInputIndex = inputWireIds.get(inputWireIds.size() - 1);
+
+        for (int i = 1; i < lastInputIndex; i++) {
+            primary.add(wireValues.get(i));
+        }
+
+        JavaPairRDD<Long, FieldT> oneFullAssignment = config.sparkContext()
+                .parallelize(assignmentPartitions, numExecutors).flatMapToPair(part -> {
+                    final long startIndex = part * (numVariables / numExecutors);
+                    final long partSize = part == numExecutors ? numVariables %
+                            (numVariables / numExecutors) : numVariables / numExecutors;
+
+                    final ArrayList<Tuple2<Long, FieldT>> assignment = new ArrayList<>();
+                    for (long i = startIndex; i < startIndex + partSize; i++) {
+                        assignment.add(new Tuple2<>(i, wireValues.get((int) i)));
+                    }
+                    return assignment.iterator();
+                }).persist(config.storageLevel());
+
+        return new Tuple2<>(primary, oneFullAssignment);
+    }
+
+    private static ArrayList<Integer> constructPartitionArray(int numPartitions, long numConstraints){
+        final ArrayList<Integer> partitions = new ArrayList<>();
+        for (int i = 0; i < numPartitions; i++) {
+            partitions.add(i);
+        }
+        if (numConstraints % 2 != 0) {
+            partitions.add(numPartitions);
+        }
+        return partitions;
+    }
+
     public static void main(String[] args) {
         if (args.length != 3) {
             System.err.println("You must specify the paths to the arithmetic circuit, the input parameters and the type of app");
@@ -549,13 +644,13 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
             final R1CSRelation<BN254aFr> r1cs = reader.constructR1CSSerial();
             final Tuple2<Assignment<BN254aFr>, Assignment<BN254aFr>> witness = reader.getWitnessSerial();
 
+            System.out.println("Num constraints: " + r1cs.numConstraints());
             System.out.println("R1CS satisfied: " + r1cs.isSatisfied(witness._1, witness._2));
         } else {
             final int numExecutors = 4;
             final int numCores = 4;
             final int numMemory = 4;
             final int numPartitions = 4;
-
 
             final SparkSession spark = SparkSession
                     .builder()
@@ -576,8 +671,10 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                     numPartitions,
                     sc,
                     StorageLevel.MEMORY_AND_DISK_SER());
-            JavaRDD r1csConstraints = reader.constructR1CSDistributed(config);
-            System.out.println(r1csConstraints.count());
+            R1CSRelationRDD<BN254aFr> r1csConstraints = reader.constructR1CSDistributed(config);
+            Tuple2<Assignment<BN254aFr>, JavaPairRDD<Long, BN254aFr>> witness = reader.getWitnessDistributed(config);
+            System.out.println(r1csConstraints.numConstraints());
+            System.out.println(r1csConstraints.isSatisfied(witness._1, witness._2));
         }
     }
 }
