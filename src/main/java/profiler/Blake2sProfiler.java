@@ -21,16 +21,44 @@ public class Blake2sProfiler {
 
     private static void distributedApp(final String app, final Configuration config) {
         System.out.format(
-                "\n[Profiler] - Start Distributed %s - %d executors - %d partitions - from %s\n\n",
+                "\n[Profiler] - Start Distributed %s - %d executors - %d partitions\n\n",
                 SparkUtils.appName(app), config.numExecutors(), config.numPartitions());
 
+        Blake2sProfiling.distributedZKSnarkProfiler(config, "");
+
         System.out.format(
-                "\n[Profiler] - End Distributed %s - %d executors - %d partitions - from %s\n\n",
+                "\n[Profiler] - End Distributed %s - %d executors - %d partitions\n\n",
                 SparkUtils.appName(app), config.numExecutors(), config.numPartitions());
     }
 
     public static void main(String[] args) {
-        serialApp("blake2s", "");
+        final int numExecutors = 4;
+        final int numCores = 4;
+        final int numMemory = 4;
+        final int numPartitions = 4;
+
+        final SparkSession spark = SparkSession
+                .builder()
+                .master("local[4]")
+                .appName(SparkUtils.appName("blake2s"))
+                .getOrCreate();
+        spark.sparkContext().conf().set("spark.files.overwrite", "true");
+        spark.sparkContext().conf().set("spark.serializer", "org.apache.spark.serializer.KryoSerializer");
+        spark.sparkContext().conf().registerKryoClasses(SparkUtils.zksparkClasses());
+
+        JavaSparkContext sc;
+        sc = new JavaSparkContext(spark.sparkContext());
+
+        final Configuration config = new Configuration(
+                numExecutors,
+                numCores,
+                numMemory,
+                numPartitions,
+                sc,
+                StorageLevel.MEMORY_AND_DISK_SER());
+
+        distributedApp("blake2s", config);
+//        serialApp("blake2s", "");
 //        if (args.length > 0) {
 //            String appType = args[0].toLowerCase();
 //            String app = "blake2s";
