@@ -197,8 +197,8 @@ public class DistributedSetup {
                 deltaG2,
                 UVWGammaG1);
 
-        long provingKeySize = ((countDeltaABCG1 + countQueryA + countQueryB + countQueryH + 3) * 254 / (8 * 10 ^ 6) +
-                (countQueryB + 2) * 2 * 254 / (8 * 10 ^ 6));
+        double provingKeySize = ((countDeltaABCG1 + countQueryA + countQueryB + countQueryH + 3) * 254 / (8 * Math.pow(10, 6)) +
+                (countQueryB + 2) * 2 * 254 / (8 * Math.pow(10, 6)));
         System.out.println("Proving key size (MB): " + provingKeySize);
 
         return new CRS<>(provingKey, verificationKey);
