@@ -112,7 +112,7 @@ public class DistributedSetup {
                 windowTableG1,
                 deltaABC,
                 config.sparkContext()).persist(config.storageLevel());
-        deltaABCG1.count();
+        long countDeltaABCG1 = deltaABCG1.count();
         qap.Ct().unpersist();
         config.endLog("Encoding deltaABC for R1CS proving key");
 
@@ -123,7 +123,7 @@ public class DistributedSetup {
                 windowTableG1,
                 qap.At(),
                 config.sparkContext()).persist(config.storageLevel());
-        queryA.count();
+        long countQueryA = queryA.count();
         qap.At().unpersist();
         config.endLog("Computing query A");
 
@@ -137,7 +137,7 @@ public class DistributedSetup {
                 windowTableG2,
                 qap.Bt(),
                 config.sparkContext()).persist(config.storageLevel());
-        queryB.count();
+        long countQueryB = queryB.count();
         qap.Bt().unpersist();
         config.endLog("Computing query B");
 
@@ -151,7 +151,7 @@ public class DistributedSetup {
                 windowTableG1,
                 inverseDeltaHtZt,
                 config.sparkContext()).persist(config.storageLevel());
-        queryH.count();
+        long countQueryH = queryH.count();
         qap.Ht().unpersist();
         config.endLog("Computing query H");
 
@@ -196,6 +196,11 @@ public class DistributedSetup {
                 gammaG2,
                 deltaG2,
                 UVWGammaG1);
+
+        long provingKeySize = countDeltaABCG1 + countQueryA + countQueryB + countQueryH + 5;
+        long verificationKeySize = UVWGammaG1.size() + 3;
+        System.out.println("Number of elements in proving key: " + provingKeySize);
+        System.out.println("Number of elements in verification key: " + verificationKeySize);
 
         return new CRS<>(provingKey, verificationKey);
     }
