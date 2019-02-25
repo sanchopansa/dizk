@@ -20,7 +20,7 @@ import zk_proof_systems.zkSNARK.objects.Proof;
 
 
 public class Blake2sProfiling {
-    public static void distributedZKSnarkProfiler(final Configuration config, String filePath) {
+    public static void distributedZKSnarkProfiler(final Configuration config, final String circuitFile, final String inputFile) {
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
@@ -29,8 +29,8 @@ public class Blake2sProfiling {
 
         PinocchioReader<BN254aFr> reader = new PinocchioReader<>(
                 fieldFactory,
-                "/home/sancho/circuits/blake2s-circuit-small/Blake2s.arith",
-                "/home/sancho/circuits/blake2s-circuit-small/Blake2s_Sample_Run1.in");
+                circuitFile,
+                inputFile);
         config.setContext("Load R1CS");
 
         config.beginLog(config.context());
@@ -104,7 +104,7 @@ public class Blake2sProfiling {
         assert (isValid);
     }
 
-    public static void serialZKSnarkProfiler(final Configuration config, String filePath) {
+    public static void serialZKSnarkProfiler(final Configuration config, String circuitFile, String inputFile) {
 
         final BN254aFr fieldFactory = new BN254aFr(2L);
         final BN254aG1 g1Factory = new BN254aG1Parameters().ONE();
@@ -113,8 +113,8 @@ public class Blake2sProfiling {
 
         PinocchioReader<BN254aFr> reader = new PinocchioReader<>(
                 fieldFactory,
-                "/home/sancho/circuits/blake2s-circuit-small/Blake2s.arith",
-                "/home/sancho/circuits/blake2s-circuit-small/Blake2s_Sample_Run1.in");
+                circuitFile,
+                inputFile);
 
         config.setContext("Load R1CS");
 
