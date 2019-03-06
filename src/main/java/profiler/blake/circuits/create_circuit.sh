@@ -7,4 +7,5 @@ function usage {
 
 [[ $# -ne 2 ]] && usage
 
+mkdir -p $1
 java -cp bin:xjsnark_backend.jar xjsnark.blake.Blake2s $1 $2
