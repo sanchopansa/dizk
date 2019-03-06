@@ -1,4 +1,4 @@
-package profiler;
+package profiler.blake;
 
 import configuration.Configuration;
 import org.apache.spark.api.java.JavaSparkContext;
