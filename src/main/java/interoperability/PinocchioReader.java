@@ -324,7 +324,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                         FieldT two = fieldParams.one();
                         for (int i = 0; i < inputWires.length; i++) {
                             A.add(new LinearTerm<>(Integer.parseInt(inputWires[i]), two));
-                            two = two.add(two);
+                            two = two.mul(two);
                         }
                         B.add(new LinearTerm<>(0, fieldParams.one()));
                         C.add(new LinearTerm<>(outputWire, fieldParams.one()));
@@ -342,7 +342,7 @@ public class PinocchioReader<FieldT extends AbstractFieldElementExpanded<FieldT>
                         for (int i = 0; i < outputWires.length; i++) {
                             int wireId = Integer.parseInt(outputWires[i]);
                             C.add(new LinearTerm<>(wireId, two));
-                            two = two.add(two);
+                            two = two.mul(two);
 
                             // Enforce bitness
                             final LinearCombination<FieldT> Aa = new LinearCombination<>();
