@@ -112,7 +112,7 @@ public class DistributedSetup {
                 windowTableG1,
                 deltaABC,
                 config.sparkContext()).persist(config.storageLevel());
-        deltaABCG1.count();
+        long countDeltaABCG1 = deltaABCG1.count();
         qap.Ct().unpersist();
         config.endLog("Encoding deltaABC for R1CS proving key");
 
@@ -123,7 +123,7 @@ public class DistributedSetup {
                 windowTableG1,
                 qap.At(),
                 config.sparkContext()).persist(config.storageLevel());
-        queryA.count();
+        long countQueryA = queryA.count();
         qap.At().unpersist();
         config.endLog("Computing query A");
 
@@ -137,7 +137,7 @@ public class DistributedSetup {
                 windowTableG2,
                 qap.Bt(),
                 config.sparkContext()).persist(config.storageLevel());
-        queryB.count();
+        long countQueryB = queryB.count();
         qap.Bt().unpersist();
         config.endLog("Computing query B");
 
@@ -151,7 +151,7 @@ public class DistributedSetup {
                 windowTableG1,
                 inverseDeltaHtZt,
                 config.sparkContext()).persist(config.storageLevel());
-        queryH.count();
+        long countQueryH = queryH.count();
         qap.Ht().unpersist();
         config.endLog("Computing query H");
 
@@ -161,6 +161,7 @@ public class DistributedSetup {
         config.beginLog("Computing gammaABC for R1CS verification key");
         config.beginRuntime("Verification Key");
         final GTT alphaG1betaG2 = pairing.reducedPairing(alphaG1, betaG2);
+        System.out.println("alphaG1betaG2:" + alphaG1betaG2);
         final G2T gammaG2 = generatorG2.mul(gamma);
         final JavaPairRDD<Long, G1T> gammaABCG1 = FixedBaseMSM.distributedBatchMSM(
                 scalarSizeG1,
@@ -196,6 +197,15 @@ public class DistributedSetup {
                 gammaG2,
                 deltaG2,
                 UVWGammaG1);
+
+        double provingKeySize = ((countDeltaABCG1 + countQueryA + countQueryB + countQueryH + 3) * 254 / (8 * Math.pow(10, 6)) +
+                (countQueryB + 2) * 2 * 254 / (8 * Math.pow(10, 6)));
+        System.out.println("Proving key size (MB): " + provingKeySize);
+
+        double verificationKeySize = (1 + UVWGammaG1.size()) * 254 / (8 * Math.pow(10, 6)) + (2 * 2 * 254 / (8 * Math.pow(10, 6)));
+        System.out.println("Verification key size (MB): " + verificationKeySize);
+
+        System.out.println("Key size (MB): " + (provingKeySize + verificationKeySize));
 
         return new CRS<>(provingKey, verificationKey);
     }

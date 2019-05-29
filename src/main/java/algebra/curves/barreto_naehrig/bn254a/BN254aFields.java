@@ -66,6 +66,8 @@ public class BN254aFields {
             return new BN254aFr(element);
         }
 
+        public BN254aFr fromHexString(final String value) { return new BN254aFr(new BigInteger(value, 16)); }
+
         public String toString() {
             return this.element.toString();
         }
@@ -129,6 +131,8 @@ public class BN254aFields {
         public BN254aFq construct(final long number) {
             return new BN254aFq(number);
         }
+
+        public BN254aFq fromHexString(final String value) { return new BN254aFq(new BigInteger(value, 16)); }
 
         public String toString() {
             return this.element.toString();

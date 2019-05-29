@@ -107,6 +107,8 @@ public class Fp extends AbstractFieldElementExpanded<Fp> implements Serializable
         return new Fp(value, FpParameters);
     }
 
+    public Fp fromHexString(final String value) { return new Fp(new BigInteger(value, 16), FpParameters); }
+
     public BigInteger toBigInteger() {
         return number;
     }
