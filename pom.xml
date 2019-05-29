@@ -30,6 +30,13 @@
             <artifactId>google-java-format</artifactId>
             <version>1.6</version>
         </dependency>
+        <dependency>
+            <groupId>com.xjsnark</groupId>
+            <artifactId>xjsnark</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/main/java/profiler/blake/circuits/xjsnark_backend.jar</systemPath>
+        </dependency>
     </dependencies>
 
     <build>
